@@ -4,12 +4,13 @@
    紙が倒れて床になり、壁と家具が立ち上がり、カメラが部屋に入って、
    最後に実写のパース（制作実例）がスキャンのように現れる。
 
-   PlanRender.make({ image }) → FLOW SCENE の web に渡すオブジェクト
+   PlanRender.make({ image, walk: [src, …] })  // walk のパースへ続けて歩いて行く → FLOW SCENE の web に渡すオブジェクト
    ========================================================= */
 (function (global) {
   const clamp = (v, a = 0, b = 1) => Math.min(Math.max(v, a), b);
   const lerp = (a, b, t) => a + (b - a) * t;
   const easeOut = t => 1 - Math.pow(1 - t, 3);
+  const smooth = t => t * t * (3 - 2 * t);
   const easeInOut = t => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
   const CY = '110,231,255', IN = '165,180,252', PK = '240,171,252', WH = '238,241,250', AM = '255,196,107';
 
@@ -81,10 +82,9 @@
   };
 
   function make (opts = {}) {
-    const img = new Image();
-    img.src = opts.image || '../assets/render-living.webp';
+    // 0: 平面図から仕上がるパース、1〜: ウォークスルーで続けて見せるパース
+    const imgs = [opts.image || '../assets/render-living.webp', ...(opts.walk || [])].map(src => { const im = new Image(); im.src = src; return im; });
     const plan = buildPlan();
-    const HOLD = 9600;   // ここまでで仕上がり、あとは実写を見せたまま AI へ戻る
     let W = 0, H = 0, narrow = false, startAt = null, cache = null;
     const look = { x: 0, y: 0 };
     let cam = CAM.top;
@@ -96,6 +96,7 @@
       rise: easeOut(clamp((ms - 4800) / 1600)),
       fly: easeInOut(clamp((ms - 6400) / 1500)),
       reveal: clamp((ms - 7900) / 1700),
+      walk: clamp((ms - WALK_FROM) / (END - WALK_FROM)),
       out: 0,
     });
 
@@ -228,27 +229,67 @@
       }
     }
 
-    function drawPhoto (ctx, reveal, fade, t) {
-      if (reveal <= 0 || !img.complete || !img.naturalWidth) return;
-      const s = Math.max(W / img.naturalWidth, H / img.naturalHeight) * 1.06;
-      const dw = img.naturalWidth * s, dh = img.naturalHeight * s;
-      const dx = (W - dw) / 2 - look.x * 18, dy = (H - dh) / 2 - look.y * 12;
+    // ウォークスルーのカット。k は [時刻ms, 注視点x, 注視点y, 拡大率]。前のカットと重なる間はディゾルブ
+    const SHOTS = [
+      { img: 0, t0: 0,     room: 'LIVING',       k: [[10400, 0.5, 0.5, 1.06], [13400, 0.74, 0.5, 1.34]] },        // TVの奥、キッチンの方へ向きながら進む
+      { img: 1, t0: 12600, room: 'LIVING → DINING', k: [[12600, 0.2, 0.48, 1.34], [15800, 0.58, 0.45, 1.12], [17600, 0.55, 0.44, 1.46]] },   // 振り向いてカウンターへ歩く
+      { img: 2, t0: 16800, room: 'CAFE COUNTER',  k: [[16800, 0.26, 0.5, 1.42], [20600, 0.56, 0.42, 1.1]] },     // カウンターからリビングの方へ向く
+    ];
+    const FADE = 800;
+    const WALK_FROM = 10400, END = 21600;
+
+    function shotView (shot, ms) {
+      const k = shot.k;
+      if (ms <= k[0][0]) return k[0].slice(1);
+      for (let i = 1; i < k.length; i++) {
+        if (ms <= k[i][0]) {
+          const u = easeInOut((ms - k[i - 1][0]) / (k[i][0] - k[i - 1][0]));
+          return [lerp(k[i - 1][1], k[i][1], u), lerp(k[i - 1][2], k[i][2], u), lerp(k[i - 1][3], k[i][3], u)];
+        }
+      }
+      return k[k.length - 1].slice(1);
+    }
+
+    function drawCover (ctx, im, fx, fy, zoom) {
+      const s = Math.max(W / im.naturalWidth, H / im.naturalHeight) * zoom;
+      const dw = im.naturalWidth * s, dh = im.naturalHeight * s;
+      const dx = clamp(W / 2 - fx * dw - look.x * 18, W - dw, 0);
+      const dy = clamp(H / 2 - fy * dh - look.y * 12, H - dh, 0);
+      ctx.drawImage(im, dx, dy, dw, dh);
+    }
+
+    const currentShot = ms => { let i = 0; SHOTS.forEach((s, j) => { if (ms >= s.t0 + FADE / 2 && (j === 0 || imgs[s.img].naturalWidth)) i = j; }); return i; };
+
+    function drawPhoto (ctx, reveal, ms, t) {
+      if (reveal <= 0 || !imgs[0].complete || !imgs[0].naturalWidth) return;
       const edge = W * easeInOut(reveal);
       ctx.save();
-      ctx.globalAlpha *= 1 - fade;
       ctx.beginPath(); ctx.rect(0, 0, edge, H); ctx.clip();
-      ctx.drawImage(img, dx, dy, dw, dh);
+      SHOTS.forEach((shot, i) => {
+        const im = imgs[shot.img];
+        if (!im.complete || !im.naturalWidth || ms < shot.t0) return;
+        const next = SHOTS[i + 1];
+        if (next && ms > next.t0 + FADE && imgs[next.img].naturalWidth) return;   // 次のカットに入りきったら描かない
+        const a = i === 0 ? 1 : smooth(clamp((ms - shot.t0) / FADE));
+        const [fx, fy, z] = shotView(shot, ms);
+        ctx.globalAlpha = a;
+        drawCover(ctx, im, fx, fy, z);
+      });
+      ctx.globalAlpha = 1;
       // 見出しが読めるよう、文字の側（PCは左、スマホは下）を暗くする
       const shade = narrow ? ctx.createLinearGradient(0, H * 0.3, 0, H) : ctx.createLinearGradient(0, 0, W * 0.6, 0);
       shade.addColorStop(0, narrow ? 'rgba(3,4,10,0)' : 'rgba(3,4,10,.78)');
       shade.addColorStop(narrow ? 0.45 : 0.55, 'rgba(3,4,10,.45)');
       shade.addColorStop(1, narrow ? 'rgba(3,4,10,.85)' : 'rgba(3,4,10,0)');
       ctx.fillStyle = shade; ctx.fillRect(0, 0, W, H);
-      // 仕上がったあとは、ゆっくり光が横切る
+      // 上の工程ラベルと HUD の下も少し暗くする
+      const top = ctx.createLinearGradient(0, 0, 0, H * 0.26);
+      top.addColorStop(0, 'rgba(3,4,10,.7)'); top.addColorStop(1, 'rgba(3,4,10,0)');
+      ctx.fillStyle = top; ctx.fillRect(0, 0, W, H * 0.26);
       if (reveal >= 1) {
         const sx = ((t * 0.00012) % 1.6 - 0.3) * W;
         const g = ctx.createLinearGradient(sx - 160, 0, sx + 160, 0);
-        g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(0.5, 'rgba(255,240,220,.08)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+        g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(0.5, 'rgba(255,240,220,.06)'); g.addColorStop(1, 'rgba(255,255,255,0)');
         ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
       }
       ctx.restore();
@@ -264,20 +305,30 @@
       }
     }
 
-    function drawSteps (ctx, s, a) {
-      if (narrow || a <= 0.01) return;
-      const names = ['PLAN', 'MODEL', 'CAMERA', 'RENDER'];
-      const prog = [s.draw, s.rise, s.fly, s.reveal];
-      const cx = W * 0.56, y = H * 0.2, gap = 96;
-      ctx.font = '11px "Space Mono", monospace'; ctx.textBaseline = 'middle'; ctx.textAlign = 'center';
-      names.forEach((n, i) => {
-        const x = cx + (i - 1.5) * gap;
-        const on = prog[i] > 0 && (i === 3 || prog[i + 1] <= 0);
-        ctx.fillStyle = `rgba(${on ? WH : IN},${(on ? 0.95 : 0.45) * a})`;
-        ctx.fillText(`0${i + 1} ${n}`, x, y);
-        ctx.fillStyle = `rgba(${IN},${0.2 * a})`; ctx.fillRect(x - 40, y + 12, 80, 1);
-        ctx.fillStyle = `rgba(${i === 3 ? AM : CY},${0.95 * a})`; ctx.fillRect(x - 40, y + 12, 80 * prog[i], 1);
-      });
+    function drawSteps (ctx, s, a, ms) {
+      if (a <= 0.01) return;
+      const names = ['PLAN', 'MODEL', 'CAMERA', 'RENDER', 'WALK'];
+      const prog = [s.draw, s.rise, s.fly, s.reveal, s.walk];
+      if (!narrow) {
+        const cx = W * 0.6, y = H * 0.13, gap = 88;
+        ctx.font = '11px "Space Mono", monospace'; ctx.textBaseline = 'middle'; ctx.textAlign = 'center';
+        names.forEach((n, i) => {
+          const x = cx + (i - 2) * gap;
+          const on = prog[i] > 0 && (i === names.length - 1 || prog[i + 1] <= 0);
+          ctx.fillStyle = `rgba(${on ? WH : IN},${(on ? 0.95 : 0.45) * a})`;
+          ctx.fillText(`0${i + 1} ${n}`, x, y);
+          ctx.fillStyle = `rgba(${IN},${0.2 * a})`; ctx.fillRect(x - 36, y + 12, 72, 1);
+          ctx.fillStyle = `rgba(${i >= 3 ? AM : CY},${0.95 * a})`; ctx.fillRect(x - 36, y + 12, 72 * prog[i], 1);
+        });
+      }
+      // 歩いている間は、今いる場所の名前
+      if (s.walk > 0) {
+        const room = SHOTS[currentShot(ms)].room;
+        ctx.font = `${narrow ? 10 : 12}px "Space Mono", monospace`; ctx.textBaseline = 'middle';
+        ctx.textAlign = narrow ? 'right' : 'center';
+        ctx.fillStyle = `rgba(255,226,176,${0.9 * a * clamp(s.walk * 8)})`;
+        ctx.fillText(`● ${room}`, narrow ? W - 20 : W * 0.6, narrow ? H * 0.47 : H * 0.13 + 34);
+      }
       ctx.textAlign = 'start';
     }
 
@@ -290,8 +341,8 @@
       },
       draw (ctx, t, alpha, build) {
         if (build < 1) startAt = null; else if (startAt === null) startAt = t;
-        const ms = startAt === null ? 0 : Math.min(t - startAt, HOLD);
-        const s = startAt === null ? { draw: 0, tilt: 0, rise: 0, fly: 0, reveal: 0, out: 0 } : stagesAt(ms);
+        const ms = startAt === null ? 0 : Math.min(t - startAt, END);
+        const s = startAt === null ? { draw: 0, tilt: 0, rise: 0, fly: 0, reveal: 0, walk: 0, out: 0 } : stagesAt(ms);
         cam = cameraFor(s);
         const wires = (1 - s.reveal * 0.85) * (1 - s.out);
 
@@ -302,8 +353,8 @@
         else drawPlan(ctx, s.draw, (1 - s.fly * 0.5) * wires, false);
         drawLabels(ctx, clamp((s.draw - 0.9) / 0.1) * (1 - s.tilt) * (1 - s.out));
         drawModel(ctx, s.rise, wires);
-        drawPhoto(ctx, s.reveal, s.out, t);
-        drawSteps(ctx, s, clamp(build * 1.5) * (1 - s.out));
+        drawPhoto(ctx, s.reveal, ms, t);
+        drawSteps(ctx, s, clamp(build * 1.5) * (1 - s.out), ms);
         ctx.restore();
       },
       // 点が集まる先：平面図の線の上（今のカメラで見た位置）
