@@ -106,7 +106,26 @@
     return s;
   }
 
-  const BUILDERS = { house, web, ai };
+  // 街：高さの違うビルを方眼の上に並べたもの（HERO LAB 03 のビル群を線画にしたもの）
+  function city () {
+    const s = [];
+    const G = -0.8;
+    const blocks = [   // [中心x, 中心z, 幅, 奥行き, 高さ]
+      [-1.05, -0.45, 0.34, 0.34, 0.9], [-0.6, -0.5, 0.3, 0.3, 1.35], [-0.15, -0.4, 0.38, 0.38, 1.7],
+      [0.35, -0.5, 0.3, 0.3, 1.1], [0.8, -0.42, 0.34, 0.34, 0.75], [-0.85, 0.25, 0.3, 0.3, 0.6],
+      [-0.35, 0.3, 0.34, 0.34, 1.0], [0.15, 0.28, 0.3, 0.3, 0.55], [0.6, 0.3, 0.36, 0.36, 1.25],
+    ];
+    blocks.forEach(([x, z, w, d, h], i) => {
+      box(s, x - w / 2, G, z - d / 2, x + w / 2, G + h, z + d / 2, i % 3 === 1 ? GREEN : CYAN);
+      for (let y = G + 0.25; y < G + h - 0.1; y += 0.25) s.push([x - w / 2, y, z + d / 2, x + w / 2, y, z + d / 2, DIM]);
+      if (h > 1.2) s.push([x, G + h, z, x, G + h + 0.25, z, PURPLE]);
+    });
+    for (let x = -1.4; x <= 1.41; x += 0.35) s.push([x, G, -1, x, G, 1, DIM]);
+    for (let z = -1; z <= 1.01; z += 0.5) s.push([-1.4, G, z, 1.4, G, z, DIM]);
+    return s;
+  }
+
+  const BUILDERS = { house, web, ai, city };
 
   /* ---------- 線分の本数をそろえる（長い線を半分に割って増やす） ---------- */
   function equalize (shape, n) {
@@ -292,5 +311,6 @@
     };
   }
 
-  global.HeroScene = { mount };
+  // 形のデータは他の演出（HERO LAB の NEURAL MORPH など）からも使う
+  global.HeroScene = { mount, shapes: BUILDERS };
 })(window);

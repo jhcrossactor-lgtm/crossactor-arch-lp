@@ -5,6 +5,7 @@ const LAB_PATTERNS = [
   { file: '03-grid.html', name: 'HORIZON GRID' },
   { file: '04-aurora.html', name: 'LIQUID AURORA' },
   { file: '05-scan.html', name: 'VISION SCAN' },
+  { file: '06-neural-morph.html', name: 'NEURAL MORPH' },
 ];
 
 (function () {
