@@ -94,6 +94,11 @@ a{ color:inherit; }
   /* 9文字の見出し（「話しかけるように、」など）が1行に収まる大きさにする */
   .title{ font-size:clamp(28px, 8.4vw, 36px); }
   .lab-switch__name{ display:none; }
+  /* パターンが増えても画面からはみ出さないよう、詰めたうえでバーの中だけ横に流せるようにする */
+  .lab-switch{ max-width:calc(100vw - 16px); overflow-x:auto; scrollbar-width:none; gap:0; }
+  .lab-switch::-webkit-scrollbar{ display:none; }
+  .lab-switch a{ padding:6px 8px; }
+  .lab-switch__sep{ display:none; }
 }
 @media (prefers-reduced-motion:reduce){
   .rise{ opacity:1; transform:none; animation:none; }

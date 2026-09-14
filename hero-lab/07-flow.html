@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>07 FLOW : AI → CITY — CROSSACTOR HERO LAB</title>
+<link rel="stylesheet" href="lab.css">
+<style>
+  :root{ --accent:#6ee7ff; }
+  body{ background:#03040a; }
+  .stage{ background:#03040a; }
+  #rain{ position:absolute; inset:0; z-index:0; width:100%; height:100%; }
+  #c{ position:absolute; inset:0; z-index:1; width:100%; height:100%; cursor:pointer; }
+  /* 奥の方を少し紺に寄せて、01 の空気感に近づける */
+  .stage::before{
+    content:""; position:absolute; inset:0; z-index:1; pointer-events:none;
+    background:radial-gradient(1100px 760px at 70% 45%, rgba(20,30,90,.28), transparent 65%);
+  }
+  .stage::after{
+    content:""; position:absolute; inset:0; z-index:2; pointer-events:none;
+    background:linear-gradient(90deg, rgba(3,4,10,.86) 0%, rgba(3,4,10,.42) 36%, rgba(3,4,10,0) 58%);
+  }
+  .eyebrow{ color:#7fe3ff; }
+  .lab-nav__cta{ color:#6ee7ff; }
+  .btn--solid{ box-shadow:0 12px 40px -12px rgba(110,231,255,.8); }
+
+  .word{ display:inline-block; transition:transform .45s var(--ease), opacity .45s var(--ease), filter .45s var(--ease); }
+  .word.is-ai  { color:#cf8bff; text-shadow:0 0 40px rgba(190,140,255,.6); }
+  .word.is-city{ color:#6ee7ff; text-shadow:0 0 40px rgba(110,231,255,.55); }
+  .word.is-out{ transform:translateY(-.45em); opacity:0; filter:blur(8px); }
+  .word.is-in{ animation:wordIn .6s var(--ease); }
+  @keyframes wordIn{
+    from{ transform:translateY(.45em); opacity:0; filter:blur(8px); }
+    to  { transform:none; opacity:1; filter:none; }
+  }
+
+  .chips{ display:flex; flex-wrap:wrap; gap:8px; list-style:none; margin:28px 0 0; padding:0; }
+  .chip{
+    appearance:none; cursor:pointer;
+    display:inline-flex; align-items:center; gap:8px;
+    padding:8px 14px; border:1px solid rgba(110,231,255,.34);
+    background:rgba(3,4,10,.6); color:rgba(238,241,250,.72);
+    font-family:var(--mono); font-size:12px; letter-spacing:.1em;
+    transition:color .3s var(--ease), background .3s var(--ease), border-color .3s var(--ease);
+  }
+  .chip span{ color:rgba(238,241,250,.4); }
+  .chip:hover:not(:disabled){ color:#fff; border-color:#6ee7ff; }
+  .chip.is-active{ background:#6ee7ff; border-color:#6ee7ff; color:#03070c; }
+  .chip.is-active span{ color:rgba(3,7,12,.55); }
+  .chip:disabled{ cursor:default; opacity:.45; border-style:dashed; }
+  .chip:focus-visible{ outline:2px solid #6ee7ff; outline-offset:3px; }
+
+  .hud{
+    position:absolute; z-index:4; right:var(--edge); top:96px;
+    font-family:var(--mono); font-size:11px; letter-spacing:.14em; line-height:2.1; text-align:right;
+    color:rgba(160,220,255,.62);
+  }
+  .hud b{ font-weight:400; color:#fff; }
+  .hud__state::before{
+    content:""; display:inline-block; width:6px; height:6px; margin-right:8px; border-radius:50%;
+    background:#6ee7ff; box-shadow:0 0 10px #6ee7ff; animation:blink 1.2s infinite;
+  }
+  @keyframes blink{ 50%{ opacity:.2; } }
+  .hint{
+    position:absolute; z-index:4; right:var(--edge); bottom:84px; margin:0;
+    font-family:var(--mono); font-size:10px; letter-spacing:.24em; color:rgba(255,255,255,.38);
+  }
+
+  @media (max-width:760px){
+    .stage::after{ background:linear-gradient(180deg, rgba(3,4,10,0) 40%, rgba(3,4,10,.9) 66%); }
+    .copy .lead{ display:none; }
+    .hud{ top:70px; font-size:10px; }
+    .hint{ display:none; }
+    .chips{ margin-top:18px; }
+    .chip{ padding:7px 10px; font-size:11px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="lab-nav">
+  <a class="lab-nav__logo" href="index.html"><img src="../assets/logo-light.png" alt="CROSSACTOR" width="618" height="314"></a>
+  <nav class="lab-nav__links" aria-label="ページ内リンク"><a href="#">Services</a><a href="#">3D VR</a><a href="#">Web</a><a href="#">AI</a></nav>
+  <a class="lab-nav__cta" href="#">無料で相談</a>
+</header>
+
+<section class="stage">
+  <canvas id="rain" aria-hidden="true"></canvas>
+  <canvas id="c" aria-hidden="true"></canvas>
+  <div class="hud" aria-hidden="true">
+    <div>NODES <b id="h-nodes">0</b></div>
+    <div>LINKS <b id="h-links">0</b></div>
+    <div class="hud__state" id="h-state">LEARNING</div>
+  </div>
+
+  <div class="copy">
+    <p class="eyebrow rise" style="--d:.05s">AI INNOVATION STUDIO</p>
+    <h1 class="title rise" style="--d:.15s" aria-label="AIも、街も、体験に変える。">
+      <span aria-hidden="true"><span class="word is-ai" id="word">AI</span>を、<br>体験に変える。</span>
+    </h1>
+    <p class="lead rise" style="--d:.28s">3D VRパース、動きのあるWebサイト、AIの活用相談。設計の現場で培った「伝わる」を、見て・触れるかたちにします。</p>
+    <div class="actions rise" style="--d:.4s">
+      <a class="btn btn--solid" href="#">無料で相談する →</a>
+      <a class="btn btn--ghost" href="#">サービスを見る</a>
+    </div>
+    <ul class="chips rise" style="--d:.52s" aria-label="場面を切り替える">
+      <li><button type="button" class="chip is-active" data-scene="ai" aria-pressed="true"><span>01</span>AI</button></li>
+      <li><button type="button" class="chip" data-scene="city" aria-pressed="false"><span>02</span>CITY</button></li>
+      <li><button type="button" class="chip" disabled title="Webの見せ方は別案を検討中"><span>03</span>WEB · 準備中</button></li>
+    </ul>
+  </div>
+  <p class="hint" aria-hidden="true" id="hint">HOVER TO ATTRACT ／ CLICK TO SEND A SIGNAL</p>
+</section>
+
+<script src="flow-scene.js"></script>
+<script src="lab.js"></script>
+<script>
+(() => {
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const word = document.getElementById('word');
+  const hint = document.getElementById('hint');
+  const chips = [...document.querySelectorAll('.chip[data-scene]')];
+  const hud = { nodes: document.getElementById('h-nodes'), links: document.getElementById('h-links'), state: document.getElementById('h-state') };
+  const WORDS = { ai: 'AI', city: '街' };
+  const HINTS = { ai: 'HOVER TO ATTRACT ／ CLICK TO SEND A SIGNAL', city: 'MOVE TO STEER ／ CLICK TO BOOST' };
+
+  const onScene = name => {
+    chips.forEach(c => { const on = c.dataset.scene === name; c.classList.toggle('is-active', on); c.setAttribute('aria-pressed', String(on)); });
+    hint.textContent = HINTS[name];
+    if (reduce) { word.textContent = WORDS[name]; word.className = `word is-${name}`; return; }
+    word.classList.add('is-out');
+    setTimeout(() => { word.textContent = WORDS[name]; word.className = `word is-in is-${name}`; }, 260);
+  };
+
+  const scene = FlowScene.mount({
+    canvas: document.getElementById('c'),
+    rainCanvas: document.getElementById('rain'),
+    pointerTarget: document.querySelector('.stage'),
+    onScene,
+    onStats: s => {
+      hud.nodes.textContent = s.nodes.toLocaleString();
+      hud.links.textContent = s.links.toLocaleString();
+      hud.state.textContent = s.state;
+    },
+  });
+  chips.forEach(c => c.addEventListener('click', () => scene.show(c.dataset.scene)));
+  // 検証用：コンソールから labScene.show('city') で切り替えられる
+  window.labScene = scene;
+})();
+</script>
+</body>
+</html>
