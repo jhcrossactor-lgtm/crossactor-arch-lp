@@ -3,8 +3,10 @@
    FLOW SCENE の3つ目の場面。方眼紙の背景の上で平面図が1本ずつ描かれ、
    紙が倒れて床になり、壁と家具が立ち上がり、カメラが部屋に入って、
    実写のパース（制作実例）がスキャンのように現れる。
-   続けて opts.walk のパースへゆっくり寄りながらクロスフェードでつながり、
-   最後は彩度が落ちて AI の色に寄り、画面全体の点に砕けて AI へ戻る。
+   続けて opts.walk のパースへクロスフェードでつながる（1枚目はゆっくり引き、
+   2枚目は右へゆっくりパン）。AI へ戻るときは、写真の素材の縁取りが
+   青い線で浮き出て、写真だけが暗く沈み、残った線がタイル状に砕けて
+   点に分解され、AI の最初へ戻る。
 
    PlanRender.make({ image, walk: [src, …] }) → FLOW SCENE の web に渡すオブジェクト
    ページ側では FlowScene.mount に webRain: 0 を渡し、AI のコードレインと
@@ -94,6 +96,7 @@
     });
     const plan = buildPlan();
     let W = 0, H = 0, narrow = false, startAt = null, cache = null, gridCache = null;
+    let edge = null, edgeCache = null;   // AI へ戻るときの縁取り（Sobel）と、そこから採った点
     const look = { x: 0, y: 0 };
     let cam = CAM.top;
 
@@ -103,7 +106,7 @@
     let scaleKey = '';
     function ensureScaled () {
       const key = `${W}x${H}`;
-      if (key !== scaleKey) { scaled.fill(null); scaleKey = key; }
+      if (key !== scaleKey) { scaled.fill(null); scaleKey = key; edge = null; edgeCache = null; }
       imgs.forEach((im, i) => {
         if (scaled[i] || !im.complete || !im.naturalWidth || !W) return;
         const cover = Math.max(W / im.naturalWidth, H / im.naturalHeight);
@@ -287,10 +290,10 @@
     }
 
     /* ---------- カットのつなぎ。k は [時刻ms, 注視点x, 注視点y, 拡大率]。
-       揺れはなし。各カットはごくゆっくり寄るだけで、クロスフェードでつなぐ。 ---------- */
+       揺れはなし。1枚目はゆっくり引き、2枚目は右へゆっくりパン。 ---------- */
     const SHOTS = [
-      { img: 0, t0: 0,     room: 'LIVING',          k: [[9600, 0.5, 0.5, 1.03], [14800, 0.6, 0.48, 1.15]] },     // 仕上がったリビング。TVの方へゆっくり寄る
-      { img: 1, t0: 14000, room: 'LIVING → DINING', k: [[14000, 0.46, 0.5, 1.04], [19600, 0.56, 0.45, 1.16]] },  // ダイニングとカウンターの方へゆっくり寄る
+      { img: 0, t0: 0,     room: 'LIVING',          k: [[9600, 0.5, 0.5, 1.14], [15400, 0.5, 0.5, 1.03]] },      // 仕上がったリビング。ゆっくり引いて全体を見せる
+      { img: 1, t0: 14200, room: 'LIVING → DINING', k: [[14200, 0.42, 0.47, 1.12], [20000, 0.56, 0.47, 1.12]] }, // ズームは固定のまま、カウンターの方へ右にパン
     ];
     const FADE = 1600;
     const WALK_FROM = 9600, END = 20000;
@@ -319,11 +322,82 @@
 
     const currentShot = ms => { let i = 0; SHOTS.forEach((s, j) => { if (ms >= s.t0 + FADE / 2 && (j === 0 || imgs[s.img].naturalWidth)) i = j; }); return i; };
 
+    /* ---------- AI へ戻るときの縁取り。最後に映っている構図を縮小して描き、
+       Sobel で素材のエッジをシアンの線として抜き出しておく ---------- */
+    function buildEdges () {
+      const last = SHOTS[SHOTS.length - 1];
+      const im = scaled[last.img] || imgs[last.img];
+      if (!im || (!im.width && !im.naturalWidth)) return;
+      const scaleTo = Math.min(1, 460 / Math.max(1, W));
+      const w = Math.max(2, Math.round(W * scaleTo)), h = Math.max(2, Math.round(H * scaleTo));
+      const src = document.createElement('canvas'); src.width = w; src.height = h;
+      const sctx = src.getContext('2d', { willReadFrequently: true });
+      // 画面と同じ構図（END 時点のビュー）で描く
+      const [fx, fy, z] = shotView(last, END);
+      const nw = im.width || im.naturalWidth, nh = im.height || im.naturalHeight;
+      const s = Math.max(w / nw, h / nh) * z;
+      const dw = nw * s, dh = nh * s;
+      sctx.drawImage(im, clamp(w / 2 - fx * dw, w - dw, 0), clamp(h / 2 - fy * dh, h - dh, 0), dw, dh);
+      const data = sctx.getImageData(0, 0, w, h).data;
+      const lum = new Float32Array(w * h);
+      for (let i = 0; i < w * h; i++) lum[i] = data[i * 4] * 0.299 + data[i * 4 + 1] * 0.587 + data[i * 4 + 2] * 0.114;
+      const out = sctx.createImageData(w, h);
+      const pts = [];
+      for (let y = 1; y < h - 1; y++) {
+        for (let x = 1; x < w - 1; x++) {
+          const i = y * w + x;
+          const gx = -lum[i - w - 1] - 2 * lum[i - 1] - lum[i + w - 1] + lum[i - w + 1] + 2 * lum[i + 1] + lum[i + w + 1];
+          const gy = -lum[i - w - 1] - 2 * lum[i - w] - lum[i - w + 1] + lum[i + w - 1] + 2 * lum[i + w] + lum[i + w + 1];
+          const g = Math.hypot(gx, gy);
+          if (g > 72) {   // 木目や小さな模様は拾わず、家具や建具の輪郭を中心に
+            out.data[i * 4] = 110; out.data[i * 4 + 1] = 231; out.data[i * 4 + 2] = 255;
+            out.data[i * 4 + 3] = Math.min(225, (g - 72) * 1.7);
+            if (g > 120 && (x * 7 + y * 13) % 5 === 0) pts.push([x / w, y / h]);   // 点分解の候補（線の上）
+          }
+        }
+      }
+      sctx.putImageData(out, 0, 0);
+      // 点をばらして偏りをなくす
+      for (let i = pts.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; const q = pts[i]; pts[i] = pts[j]; pts[j] = q; }
+      edge = { cv: src, w, h, pts, tiles: null };
+    }
+
+    // 縁取りの線：浮き出たあと、タイル状に砕けて飛散する
+    function drawEdges (ctx, out) {
+      if (!edge || out <= 0.01) return;
+      const appear = smooth(clamp(out / 0.32));
+      const dissolve = smooth(clamp((out - 0.42) / 0.52));
+      const cols = 22, rows = 14;
+      if (!edge.tiles) {
+        edge.tiles = [];
+        for (let i = 0; i < cols * rows; i++) {
+          const a = Math.random() * Math.PI * 2;
+          edge.tiles.push({ r: Math.random() * 0.85, dx: Math.cos(a), dy: Math.sin(a) - 0.7 });
+        }
+      }
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      const tw = edge.w / cols, th = edge.h / rows, dw = W / cols, dh = H / rows;
+      for (let r = 0; r < rows; r++) {
+        for (let c = 0; c < cols; c++) {
+          const tile = edge.tiles[r * cols + c];
+          const k = dissolve <= tile.r ? 0 : (dissolve - tile.r) / (1 - tile.r + 1e-4);
+          const a = appear * (1 - k);
+          if (a <= 0.02) continue;
+          ctx.globalAlpha = a * 0.95;
+          ctx.drawImage(edge.cv, c * tw, r * th, tw, th,
+            c * dw + tile.dx * k * 70 - look.x * 18, r * dh + tile.dy * k * 70 - look.y * 12, dw, dh);
+        }
+      }
+      ctx.restore();
+    }
+
     // out: AI へ戻る進み具合（0→1）。彩度を落として紺に寄せてから薄くなる
     function drawPhoto (ctx, reveal, ms, t, alpha, out) {
       if (reveal <= 0 || !imgs[0].complete || !imgs[0].naturalWidth) return;
       ensureScaled();
-      const photoK = alpha * (1 - smooth(clamp((out - 0.45) / 0.55)));
+      // 写真は縁取りより先に暗く沈む（線だけが残る）
+      const photoK = alpha * (1 - smooth(clamp((out - 0.08) / 0.5)));
       if (photoK <= 0.01) return;
       const edge = W * easeInOut(reveal);
       ctx.save();
@@ -343,10 +417,10 @@
       });
       if (canFilter) ctx.filter = 'none';
       ctx.globalAlpha = photoK;
-      // AI へ戻るとき：AI の場面の紺〜シアンに寄せていく
+      // AI へ戻るとき：彩度が落ちた写真を、AI の場面の紺に沈めていく
       if (out > 0.01) {
-        ctx.fillStyle = `rgba(10,18,46,${0.6 * out})`; ctx.fillRect(0, 0, W, H);
-        ctx.fillStyle = `rgba(${CY},${0.05 * out})`; ctx.fillRect(0, 0, W, H);
+        ctx.fillStyle = `rgba(6,12,32,${0.8 * clamp(out * 1.5)})`; ctx.fillRect(0, 0, W, H);
+        ctx.fillStyle = `rgba(${CY},${0.04 * out})`; ctx.fillRect(0, 0, W, H);
       }
       // 見出しが読めるよう、文字の側（PCは左、スマホは下）を暗くする
       const shade = narrow ? ctx.createLinearGradient(0, H * 0.3, 0, H) : ctx.createLinearGradient(0, 0, W * 0.6, 0);
@@ -429,14 +503,29 @@
         else drawPlan(ctx, s.draw, (1 - s.fly * 0.5) * wires, false);
         drawLabels(ctx, clamp((s.draw - 0.9) / 0.1) * (1 - s.tilt));
         drawModel(ctx, s.rise, wires);
+        // 縁取りは AI へ戻る少し前（最後の静止中）に用意しておく
+        if (startAt !== null && ms >= END - 150 && !edge && imgs[SHOTS[SHOTS.length - 1].img].naturalWidth) buildEdges();
         drawPhoto(ctx, s.reveal, ms, t, alpha, out);
+        drawEdges(ctx, out);   // 青い線は写真のフェードと別に残り、砕けて消える
         drawSteps(ctx, s, clamp(build * 1.5), ms);
         ctx.restore();
       },
       // 点が集まる先／散らばる元
       targets (n, now) {
         const ms = startAt === null ? 0 : Math.min((now !== undefined ? now : performance.now()) - startAt, END);
-        // 実写が出てからは画面全体に散らばった点：AIへ戻るとき、写真が点に砕けて見える
+        // 実写が出てからは、縁取りの線の上の点：AIへ戻るとき、青い線が点に分解されて見える
+        if (startAt !== null && ms > 8600 && edge && edge.pts.length > 48) {
+          if (!edgeCache || edgeCache.n !== n) {
+            const step = edge.pts.length / n, pts = [];
+            for (let i = 0; i < n; i++) {
+              const q = edge.pts[Math.min(edge.pts.length - 1, Math.floor(i * step))];
+              pts.push([q[0] * W, q[1] * H]);
+            }
+            edgeCache = { n, pts };
+          }
+          return edgeCache.pts;
+        }
+        // 縁取りがまだ無ければ画面全体に散らばった点
         if (startAt !== null && ms > 8600) {
           if (!gridCache || gridCache.n !== n || gridCache.w !== W || gridCache.h !== H) {
             const cols = Math.max(2, Math.ceil(Math.sqrt(n * W / Math.max(1, H))));

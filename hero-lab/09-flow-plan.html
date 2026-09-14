@@ -151,7 +151,7 @@
     rainCanvas: document.getElementById('rain'),
     pointerTarget: document.querySelector('.stage'),
     web: PlanRender.make({ image: '../assets/render-living.webp', walk: ['../assets/walk-living2.webp'] }),
-    durations: { toWeb: 2600, web: 21200 },
+    durations: { toWeb: 2600, web: 21200, toAI: 3400 },   // 縁取り→分解をゆっくり見せる
     webRain: 0,   // PLAN の背景は方眼紙（plan-render 側で描く）。AI のコードレインは消す
     stateNames: { toWeb: 'DRAFTING', web: 'PLAN → RENDER' },
     onScene,
