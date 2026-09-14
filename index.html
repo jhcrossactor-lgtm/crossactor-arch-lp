@@ -3,36 +3,137 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>CROSSACTOR — 設計意図を、体験に変える。</title>
-<meta name="description" content="図面を読み、骨組みを組み、光と素材を置く。設計者の視点で、まだ建っていない住まいを歩ける3D VR空間にします。">
+<title>CROSSACTOR — 建築も、Webも、AIも、体験に変える。</title>
+<meta name="description" content="3D VRパース制作、動きのあるWebサイト・LP制作、AI導入・活用の相談。設計の現場で培った「伝わる」を、見て触れるかたちにするスタジオです。">
 <link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="sections.css">
 </head>
 <body>
 
 <header class="nav">
   <a class="nav__logo" href="#top"><img src="assets/logo-light.png" alt="CROSSACTOR AI INNOVATION STUDIO" width="618" height="314"></a>
   <nav class="nav__links" aria-label="ページ内リンク">
-    <a href="#top">Sequence</a>
-    <a href="#usecase">Use cases</a>
-    <a href="#compare">Before / After</a>
-    <a href="#process">Process</a>
+    <a href="#services">Services</a>
+    <a href="#vr">3D VR</a>
+    <a href="#showcase">Web</a>
+    <a href="#diagnosis">相談診断</a>
     <a href="#profile">Profile</a>
   </nav>
-  <a class="btn btn--line nav__cta" href="#contact">相談する</a>
+  <a class="btn btn--primary nav__cta" href="#diagnosis">無料で相談</a>
 </header>
 
 <main>
 
-<!-- ============ SEQUENCE ============
+<!-- ============ HERO ============
+     線だけの3Dモデルが 家 → Webサイト → AI と組み替わり、見出しの語も連動して入れ替わる -->
+<section class="hero" id="top">
+  <canvas class="hero__canvas" id="hero-canvas" aria-hidden="true"></canvas>
+  <div class="hero__glow" aria-hidden="true"></div>
+
+  <div class="hero__inner">
+    <p class="label rise" style="--d:.05s"><span class="label__dot"></span>AI INNOVATION STUDIO</p>
+    <h1 class="hero__title rise" style="--d:.15s" aria-label="建築も、Webも、AIも、体験に変える。">
+      <span aria-hidden="true"><span class="hero__word"><span class="hero__word-in is-cyan" id="hero-word">建築</span></span>を、<br>体験に変える。</span>
+    </h1>
+    <p class="hero__lead rise" style="--d:.28s">
+      3D VRパース、動きのあるWebサイト、AIの活用相談。<br>
+      設計の現場で培った「伝わる」を、見て・触れるかたちにします。
+    </p>
+    <div class="hero__actions rise" style="--d:.4s">
+      <a class="btn btn--primary btn--lg" href="#diagnosis">30秒の相談診断をする</a>
+      <a class="btn btn--line btn--lg" href="#services">サービスを見る</a>
+    </div>
+    <ul class="hero__chips rise" style="--d:.52s" aria-label="表示する線画を切り替える">
+      <li><button type="button" class="chip is-active" data-shape="0" aria-pressed="true"><span>01</span>3D VR</button></li>
+      <li><button type="button" class="chip" data-shape="1" aria-pressed="false"><span>02</span>WEB</button></li>
+      <li><button type="button" class="chip" data-shape="2" aria-pressed="false"><span>03</span>AI</button></li>
+    </ul>
+  </div>
+
+  <p class="hero__hint" aria-hidden="true">MOVE CURSOR ／ CLICK TO REBUILD</p>
+  <a class="hero__made" href="#showcase">このサイトも CROSSACTOR が制作しています →</a>
+</section>
+
+<div class="marquee" aria-hidden="true">
+  <div class="marquee__track">
+    <div class="marquee__group"><span>3D VR VISUALIZATION</span><i>／</i><span>WEB DESIGN &amp; LP</span><i>／</i><span>AI CONSULTING</span><i>／</i><span>設計意図を、体験に変える</span><i>／</i></div>
+    <div class="marquee__group"><span>3D VR VISUALIZATION</span><i>／</i><span>WEB DESIGN &amp; LP</span><i>／</i><span>AI CONSULTING</span><i>／</i><span>設計意図を、体験に変える</span><i>／</i></div>
+  </div>
+</div>
+
+<!-- ============ SERVICES ============ -->
+<section class="section" id="services">
+  <div class="wrap">
+    <p class="label reveal"><span class="label__dot"></span>SERVICES</p>
+    <h2 class="h2 reveal">まだ見えないものを、<wbr>伝わるかたちに。</h2>
+    <p class="lead reveal">まだ建っていない住まい、まだ言葉になっていない魅力、まだ使いこなせていないAI。どれも「見て、触れて、わかる」ところまで持っていきます。</p>
+
+    <div class="svc">
+      <div class="reveal">
+        <article class="svc__card" data-kind="vr">
+          <span class="svc__no" aria-hidden="true">01</span>
+          <p class="svc__en">3D VR VISUALIZATION</p>
+          <h3>3D VRパース制作</h3>
+          <p>図面や現地の写真から、スマホで歩き回れるVR空間をつくります。モデルハウスが建つ前の販売や、リフォームの提案に。</p>
+          <ul class="svc__list">
+            <li>図面から一から制作</li>
+            <li>360度写真から家具をAIで削除</li>
+            <li>URLひとつで共有</li>
+          </ul>
+          <div class="svc__foot">
+            <a class="btn btn--line" href="#vr">制作例を見る</a>
+            <a class="svc__consult" href="#diagnosis" data-consult="vr">この内容で相談する →</a>
+          </div>
+        </article>
+      </div>
+      <div class="reveal" data-delay="90">
+        <article class="svc__card" data-kind="web">
+          <span class="svc__no" aria-hidden="true">02</span>
+          <p class="svc__en">WEB DESIGN &amp; LP</p>
+          <h3>Webサイト・LP制作</h3>
+          <p>見た人が思わず触りたくなる、動きのあるサイトやLPをつくります。演出だけで終わらせず、問い合わせまでの流れまで設計します。</p>
+          <ul class="svc__list">
+            <li>スクロールや3Dを使った演出</li>
+            <li>問い合わせ・予約までの導線設計</li>
+            <li>スマホでも見やすく、軽い作り</li>
+          </ul>
+          <div class="svc__foot">
+            <a class="btn btn--line" href="#showcase">このサイトの仕組みを見る</a>
+            <a class="svc__consult" href="#diagnosis" data-consult="web">この内容で相談する →</a>
+          </div>
+        </article>
+      </div>
+      <div class="reveal" data-delay="180">
+        <article class="svc__card" data-kind="ai">
+          <span class="svc__no" aria-hidden="true">03</span>
+          <p class="svc__en">AI CONSULTING</p>
+          <h3>AI導入・活用の相談</h3>
+          <p>「何に使えるのか」から一緒に整理します。資料づくりや調べものなど、日々の仕事の中でAIに任せられる部分を見つけ、使える形にします。</p>
+          <ul class="svc__list">
+            <li>業務の棚卸しと、活用のたたき台づくり</li>
+            <li>資料作成・情報収集の効率化</li>
+            <li>社内向けの使い方レクチャー</li>
+          </ul>
+          <div class="svc__foot">
+            <a class="btn btn--line" href="#diagnosis" data-consult="ai">診断から始める</a>
+            <a class="svc__consult" href="#diagnosis" data-consult="ai">この内容で相談する →</a>
+          </div>
+        </article>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 3D VR：SEQUENCE ============
      縦に長いセクションの中身を sticky で固定し、スクロール量で
      図面 → 構造 → 完成 → 体験 の順に建物が立ち上がっていく -->
-<section class="seq" id="top">
+<section class="seq" id="vr">
   <div class="seq__stage">
     <div class="grid" aria-hidden="true"></div>
 
     <div class="seq__copy">
-      <p class="label"><span class="label__dot"></span>3D VR ARCHITECTURAL VISUALIZATION</p>
-      <h1 class="seq__title">設計意図を、<br><span class="hl">体験</span>に変える。</h1>
+      <p class="label"><span class="label__dot"></span>SERVICE 01 — 3D VR</p>
+      <h2 class="seq__title">図面が、<br><span class="hl">歩ける空間</span>に<wbr>なるまで。</h2>
       <p class="seq__lead">
         図面を読み、骨組みを組み、光と素材を置く。<br>
         設計者の視点で、まだ建っていない住まいを「歩ける現実」にします。
@@ -46,7 +147,7 @@
       </ol>
 
       <div class="seq__actions">
-        <a class="btn btn--primary" href="#contact">無料で相談する</a>
+        <a class="btn btn--primary" href="#diagnosis" data-consult="vr">3D VRを相談する</a>
         <a class="btn btn--line" href="#compare">制作事例を見る</a>
       </div>
     </div>
@@ -81,43 +182,10 @@
   </div>
 </section>
 
-<!-- ============ USE CASES ============ -->
-<section class="section" id="usecase">
-  <div class="wrap">
-    <p class="label reveal"><span class="label__dot"></span>01 — USE CASES</p>
-    <h2 class="h2 reveal">こんな場面で使えます</h2>
-    <p class="lead reveal">建物が建つ前でも、今の住まいのままでも。図面や写真から、見る人が自分で歩き回れる空間をつくります。</p>
-
-    <div class="cards">
-      <article class="card reveal">
-        <span class="card__no">01</span>
-        <svg class="card__icon" viewBox="0 0 56 56" aria-hidden="true"><path d="M8 28 28 10l20 18"/><path d="M13 24v22h30V24"/><path d="M24 46V34h8v12"/></svg>
-        <h3>モデルハウス完成前に</h3>
-        <p>建物が建つ前でも、VRがあればモデルハウス代わりに活用できます。</p>
-        <span class="tag">新築・先行販売</span>
-      </article>
-      <article class="card reveal" data-delay="90">
-        <span class="card__no">02</span>
-        <svg class="card__icon" viewBox="0 0 56 56" aria-hidden="true"><rect x="8" y="10" width="40" height="26"/><path d="M28 36v10M18 46h20"/><path d="M14 30l8-8 6 5 10-11"/></svg>
-        <h3>設計プレゼンに</h3>
-        <p>図面だけでは伝わらない空間の広がりを、実体験として届けます。</p>
-        <span class="tag">コンペ・提案</span>
-      </article>
-      <article class="card reveal" data-delay="180">
-        <span class="card__no">03</span>
-        <svg class="card__icon" viewBox="0 0 56 56" aria-hidden="true"><rect x="5" y="14" width="19" height="28"/><rect x="32" y="14" width="19" height="28"/><path d="M20 28h16M31 23l5 5-5 5"/></svg>
-        <h3>リフォームの提案に</h3>
-        <p>現状のお住まいからVR化。ビフォーアフターを体感で伝えます。</p>
-        <span class="tag">Before / After</span>
-      </article>
-    </div>
-  </div>
-</section>
-
-<!-- ============ BEFORE / AFTER ============ -->
+<!-- ============ 3D VR：BEFORE / AFTER ============ -->
 <section class="section" id="compare">
   <div class="wrap">
-    <p class="label reveal"><span class="label__dot"></span>02 — BEFORE / AFTER</p>
+    <p class="label reveal"><span class="label__dot"></span>3D VR — BEFORE / AFTER</p>
     <h2 class="h2 reveal">今の住まいが、そのまま提案になる。</h2>
     <p class="lead reveal">現地を360度撮影し、家具や小物をAIで取り除いてから、新しい暮らしを重ねます。つまみを動かして比べ、画像をドラッグして部屋を見回してください。</p>
 
@@ -143,11 +211,70 @@
   </div>
 </section>
 
-<!-- ============ PROCESS ============ -->
+<!-- ============ WEB：SHOWCASE ============ -->
+<section class="section" id="showcase">
+  <div class="wrap">
+    <p class="label reveal"><span class="label__dot"></span>SERVICE 02 — WEB DESIGN</p>
+    <h2 class="h2 reveal">このページも、<wbr>作品のひとつです。</h2>
+    <p class="lead reveal">いま見ていただいている動きは、すべてこのサイトのために作ったものです。「こういう見せ方をしたい」を、そのままご相談ください。</p>
+
+    <div class="show">
+      <a class="show__item reveal" href="#top">
+        <span class="show__no">01</span>
+        <h3>触って動く3Dの線画</h3>
+        <p>カーソルに反応し、クリックで形が組み替わるファーストビュー。最初の数秒で「このサイト、他と違う」を作ります。</p>
+        <span class="show__go">トップで試す ↑</span>
+      </a>
+      <a class="show__item reveal" href="#vr" data-delay="80">
+        <span class="show__no">02</span>
+        <h3>スクロールで進む物語</h3>
+        <p>図面から完成までを、スクロールに合わせて見せる演出。長い説明を読ませずに、流れで伝えます。</p>
+        <span class="show__go">3D VRで試す ↑</span>
+      </a>
+      <a class="show__item reveal" href="#compare" data-delay="160">
+        <span class="show__no">03</span>
+        <h3>比べて、見回せる</h3>
+        <p>ビフォーアフターをつまみで比べ、ドラッグで360度見回せるスライダー。違いを「体感」で伝えます。</p>
+        <span class="show__go">事例で試す ↑</span>
+      </a>
+      <div class="show__item show__item--cta reveal" data-delay="240">
+        <span class="show__no">04</span>
+        <h3>問い合わせまで、つなげる</h3>
+        <p>サービスの紹介から診断、相談フォームまで。見た人が迷わず次の一歩に進める流れを設計します。</p>
+        <a class="btn btn--primary" href="#diagnosis" data-consult="web">こんなサイトを相談する</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 相談診断 ============ -->
+<section class="section diag" id="diagnosis">
+  <div class="wrap diag__wrap">
+    <div class="diag__intro">
+      <p class="label reveal"><span class="label__dot"></span>SERVICE 03 — CONSULTATION</p>
+      <h2 class="h2 reveal">30秒の診断で、<br>相談メモを<wbr>つくります。</h2>
+      <p class="lead reveal">いくつかの質問に答えるだけで、ご相談内容を整理したメモと、最初の一歩の案がその場で出ます。3D VR・Web・AIのどれでも、まだ決まっていなくても大丈夫です。</p>
+      <ul class="diag__points reveal">
+        <li>登録不要・無料</li>
+        <li>送信するまで、入力内容はどこにも送られません</li>
+        <li>メモを見てから、送るかどうか決められます</li>
+      </ul>
+    </div>
+
+    <div class="diag__panel reveal" id="diag">
+      <div class="diag__bar"><i id="diag-bar"></i></div>
+      <div class="diag__view" id="diag-view" aria-live="polite"></div>
+      <div class="diag__nav"><button type="button" class="diag__back" id="diag-back" hidden>← ひとつ戻る</button></div>
+      <noscript><p class="diag__msg">診断には JavaScript が必要です。下のフォームから直接ご相談ください。</p></noscript>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 3D VR：PROCESS ============ -->
 <section class="section" id="process">
   <div class="wrap">
-    <p class="label reveal"><span class="label__dot"></span>03 — PROCESS</p>
-    <h2 class="h2 reveal">制作の流れ</h2>
+    <p class="label reveal"><span class="label__dot"></span>3D VR — PROCESS</p>
+    <h2 class="h2 reveal">3D VRの制作の流れ</h2>
     <p class="lead reveal">図面から一から組み立てる方法と、今ある部屋の写真から仕立てる方法。どちらも、URLひとつで内覧できるVRに仕上げます。</p>
 
     <div class="tracks">
@@ -174,12 +301,12 @@
 <!-- ============ PROFILE ============ -->
 <section class="section" id="profile">
   <div class="wrap">
-    <p class="label reveal"><span class="label__dot"></span>04 — WHY / PROFILE</p>
+    <p class="label reveal"><span class="label__dot"></span>WHY / PROFILE</p>
     <h2 class="h2 reveal">描くのは、建つことを<wbr>知っている人。</h2>
     <p class="profile__text reveal">
       設計、企画、営業、現場監督。建築の現場を一通り動かしてきた視点で図面を読み解き、
       きれいな絵で終わらせず、施工まで見据えた「現実に建つ」解像度で空間を組み立てます。
-      ホームインスペクターや整理収納アドバイザーとしての視点も、提案の説得力に変えます。
+      ホームインスペクターや整理収納アドバイザーの視点、AIマーケターとしての知識も、提案の説得力に変えます。
     </p>
 
     <div class="why">
@@ -190,23 +317,29 @@
 
     <ul class="skills reveal" aria-label="スキルと資格">
       <li>建築設計</li><li>ホームインスペクター</li><li>整理収納アドバイザー</li><li>色彩福祉</li>
-      <li>3DCAD</li><li>3DVRレンダリング</li><li>Photoshop・Illustrator</li><li>動画制作</li><li>生成AIパスポート</li>
+      <li>3DCAD</li><li>3DVRレンダリング</li><li>Photoshop・Illustrator</li><li>動画制作</li>
+      <li>SNSデザイナー</li><li>生成AIパスポート</li>
     </ul>
   </div>
 </section>
 
-<!-- ============ CTA ============ -->
+<!-- ============ CONTACT ============ -->
 <section class="cta" id="contact">
   <div class="wrap cta__inner">
     <p class="label label--center reveal"><span class="label__dot"></span>CONTACT</p>
-    <h2 class="cta__title reveal">図面が1枚あれば、始められます。</h2>
-    <p class="cta__lead reveal">平面図でも、今のお部屋の写真でも。まずは何を伝えたいかから、一緒に整理しましょう。</p>
-    <a class="btn btn--primary btn--lg reveal" href="#contact">相談する</a>
-    <p class="cta__note">※ このページは検証用の下書きです。お問い合わせ先は仮のリンクです。</p>
+    <h2 class="cta__title reveal">まずは、話してみませんか。</h2>
+    <p class="cta__lead reveal">3D VR、Webサイト、AIの活用。まだ内容が固まっていなくても大丈夫です。</p>
+    <div class="cta__actions reveal">
+      <a class="btn btn--primary btn--lg" href="#diagnosis">診断してから相談する</a>
+      <a class="btn btn--line btn--lg" id="form-direct" href="#contact">フォームで直接相談する</a>
+    </div>
+    <p class="cta__note" id="form-note">※ このページは検証用の下書きです。</p>
   </div>
 </section>
 
 </main>
+
+<a class="float-cta" id="float-cta" href="#diagnosis"><span class="float-cta__dot" aria-hidden="true"></span>無料で相談診断</a>
 
 <footer class="foot">
   <div class="wrap foot__inner">
@@ -219,6 +352,9 @@
   </div>
 </footer>
 
+<script src="hero3d.js"></script>
 <script src="app.js"></script>
+<script src="top.js"></script>
+<script src="consult.js"></script>
 </body>
 </html>
