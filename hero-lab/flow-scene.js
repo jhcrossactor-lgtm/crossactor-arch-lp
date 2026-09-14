@@ -1,15 +1,18 @@
 /* =========================================================
-   FLOW SCENE（HERO LAB 07）
+   FLOW SCENE（HERO LAB 07 / 08）
    AI ：コードが流れる背景の中で、漂う点と線（01）が集まって、うごめく集合体になる。
         集合体はカーソルの方へ少し寄り、近くの点はカーソルについてくる。
    街 ：集合体がほどけて、03 の街（グリッドと立ち上がるビル）の辺に吸い込まれる。
-        しばらく街の中を進んだら、ビルが点に戻って AI へ帰る。
+   Web：（opts.web があるとき）ビルが点に戻り、Webの形の輪郭に集まって組み上がる。
+        Webの形は web-variants.js の中から差し替えられる。
+   最後は点に戻って AI へ帰る。
 
    FlowScene.mount({
      canvas, rainCanvas, pointerTarget,
-     onScene: name => {},                               // 'ai' | 'city'
+     web,                                               // 省略すると AI → 街 → AI
+     onScene: name => {},                               // 'ai' | 'city' | 'web'
      onStats: ({ nodes, links, state }) => {},          // 250ms ごと
-   }) → { show('ai' | 'city'), scene }
+   }) → { show(name), jump(name), setWeb(renderer), scene }
    ========================================================= */
 (function (global) {
   const clamp = (v, a = 0, b = 1) => Math.min(Math.max(v, a), b);
@@ -164,7 +167,6 @@
         }
 
         blds.sort((a, b) => b.z - a.z);
-        let visible = 0;
         for (const b of blds) {
           const dz = b.z - cam.z;
           if (dz < 1.2 || dz > FAR) continue;
@@ -172,7 +174,6 @@
           if (rise < 0.01) continue;
           const P = cornersOf(b, riseK);
           if (!P) continue;
-          visible++;
           const fog = Math.pow(clamp(1 - dz / FAR), 1.1);
           const poly = idx => { ctx.beginPath(); idx.forEach((i, k) => (k ? ctx.lineTo(P[i][0], P[i][1]) : ctx.moveTo(P[i][0], P[i][1]))); ctx.closePath(); };
           const side = b.x > cam.x ? [0, 3, 7, 4] : [1, 2, 6, 5];
@@ -201,7 +202,6 @@
           }
         }
         ctx.restore();
-        return visible;
       },
 
       // 点が吸い込まれる先：見えているビルの辺の上の位置を n 個えらぶ
@@ -228,8 +228,10 @@
 
   /* ---------------------------------------------------------
      全体の流れ
-     drift（漂う）→ cluster（集合体）→ toCity（街へ）→ city（街）→ toAI（点に戻る）→ drift …
+     drift → cluster → toCity → city → (toWeb → web →) toAI → drift …
      --------------------------------------------------------- */
+  const SCENE_OF = { drift: 'ai', cluster: 'ai', toAI: 'ai', toCity: 'city', city: 'city', toWeb: 'web', web: 'web' };
+
   function mount (opts) {
     const fg = opts.canvas;
     const ctx = fg.getContext('2d');
@@ -237,12 +239,14 @@
     const rain = codeRain(opts.rainCanvas);
     const city = cityScene();
     const host = opts.pointerTarget || fg;
-    const PH = { drift: 2200, cluster: 6500, toCity: 2600, city: 8500, toAI: 2000 };
+    const PH = { drift: 2200, cluster: 6500, toCity: 2600, city: 8500, toWeb: 2800, web: 10000, toAI: 2000 };
 
+    let web = opts.web || null;
     let W = 0, H = 0, narrow = false, N = 0;
     let parts = [], dirs = [], refs = [];
-    let phase = 'drift', phaseStart = performance.now(), want = null;
-    let rainK = 1, cityAlpha = 0, cityRise = 0, swarmAlpha = 1;
+    let phase = 'drift', phaseStart = performance.now(), want = null, source = 'ai';
+    let rainK = 1, cityAlpha = 0, cityRise = 0, swarmAlpha = 1, webAlpha = 0, webBuild = 0;
+    let lv0 = { rainK, cityAlpha, cityRise, webAlpha, webBuild };
     let yaw = 0, linkCount = 0, scene = 'ai', statsAt = 0;
     const center = { x: 0, y: 0 };
     const mouse = { x: -1e4, y: -1e4, active: false };
@@ -262,6 +266,7 @@
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       rain.resize();
       city.resize(W, H);
+      if (web) web.resize(W, H, narrow);
       const n = narrow ? 320 : 520;
       if (n !== N) {
         N = n;
@@ -293,54 +298,85 @@
       return [center.x + x * r * f, center.y - y * r * f, f];
     }
 
-    function enter (p, now) {
-      phase = p; phaseStart = now;
-      if (p === 'toCity') refs = city.sampleRefs(N);
-      if (p === 'toAI') {
-        // ビルの辺の位置から点をはじき出す
-        const from = city.sampleRefs(N);
-        parts.forEach((q, i) => {
-          const pos = from[i] && city.refPos(from[i], 1);
-          if (pos) { q.x = pos[0]; q.y = pos[1]; }
-          q.vx = rand(-2.2, 2.2); q.vy = rand(-4.5, -0.6);
-        });
-        refs = [];
-      }
+    // 直前の場面の形（ビルの辺・Webの輪郭）の位置に点を置き直す
+    function snapFrom (src, burst, now) {
+      let pts = null;
+      if (src === 'city') { pts = city.sampleRefs(N).map(r => city.refPos(r, 1)); }
+      else if (src === 'web' && web) pts = web.targets(N, now);
+      if (!pts) return;
+      parts.forEach((q, i) => {
+        const pos = pts[i];
+        if (pos) { q.x = pos[0]; q.y = pos[1]; }
+        if (burst) { q.vx = rand(-2.2, 2.2); q.vy = rand(-4.5, -0.6); }
+        else { q.vx = rand(-1, 1); q.vy = rand(-1, 1); }
+      });
     }
+
+    function enter (p, now) {
+      const src = SCENE_OF[phase];
+      lv0 = { rainK, cityAlpha, cityRise, webAlpha, webBuild };
+      phase = p; phaseStart = now; source = src;
+      if (p === 'toCity') { if (src === 'web') snapFrom('web', false, now); refs = city.sampleRefs(N); }
+      if (p === 'toWeb') { if (src === 'city') snapFrom('city', false, now); refs = []; }
+      if (p === 'toAI') { snapFrom(src, true, now); refs = []; }
+    }
+
+    const NEXT = () => ({ drift: 'cluster', cluster: 'toCity', toCity: 'city', city: web ? 'toWeb' : 'toAI', toWeb: 'web', web: 'toAI', toAI: 'drift' });
 
     function update (dt, now) {
       let u = clamp((now - phaseStart) / PH[phase]);
-      if (phase === 'drift' && (u >= 1 || want === 'city')) { enter(want === 'city' ? 'toCity' : 'cluster', now); want = null; }
-      else if (phase === 'cluster' && (u >= 1 || want === 'city')) { enter('toCity', now); want = null; }
-      else if (phase === 'toCity' && u >= 1) enter('city', now);
-      else if (phase === 'city' && (u >= 1 || want === 'ai')) { enter('toAI', now); want = null; }
-      else if (phase === 'toAI' && u >= 1) enter('drift', now);
-      if (want === 'ai' && (phase === 'drift' || phase === 'cluster')) want = null;
+      if (want === 'web' && !web) want = null;
+      if (want && SCENE_OF[phase] === want) want = null;
+      // 遷移の途中は最後まで見せ、落ち着いている場面からだけ切り替える
+      if (want && ['drift', 'cluster', 'city', 'web'].includes(phase)) {
+        enter({ ai: 'toAI', city: 'toCity', web: 'toWeb' }[want], now);
+        want = null;
+      } else if (u >= 1) {
+        enter(NEXT()[phase], now);
+      }
       u = clamp((now - phaseStart) / PH[phase]);
 
-      // 背景のコード・街・点の、それぞれの濃さ
+      // 背景のコード・街・Web・点の、それぞれの濃さ
       const toward = (cur, target, rate) => cur + (target - cur) * Math.min(1, rate * dt);
+      const swarmIn = source === 'ai' ? 1 : smooth(clamp(u / 0.15));
       if (phase === 'drift' || phase === 'cluster') {
-        rainK = toward(rainK, 1, 0.05); cityAlpha = 0; cityRise = 0; swarmAlpha = toward(swarmAlpha, 1, 0.1);
+        rainK = toward(rainK, 1, 0.05); cityAlpha = 0; cityRise = 0;
+        webAlpha = toward(webAlpha, 0, 0.1); swarmAlpha = toward(swarmAlpha, 1, 0.1);
       } else if (phase === 'toCity') {
-        rainK = 1 - smooth(u);
+        rainK = lerp(lv0.rainK, 0, smooth(u));
         cityAlpha = smooth(clamp(u * 1.3));
         cityRise = easeOut(clamp((u - 0.15) / 0.85));
-        swarmAlpha = 1 - smooth(clamp((u - 0.55) / 0.45));
+        webAlpha = lerp(lv0.webAlpha, 0, smooth(clamp(u * 1.5)));
+        swarmAlpha = swarmIn * (1 - smooth(clamp((u - 0.55) / 0.45)));
       } else if (phase === 'city') {
-        rainK = 0; cityAlpha = 1; cityRise = 1; swarmAlpha = 0;
+        rainK = 0; cityAlpha = 1; cityRise = 1; webAlpha = 0; swarmAlpha = 0;
+      } else if (phase === 'toWeb') {
+        rainK = lerp(lv0.rainK, 0.35, smooth(u));
+        cityAlpha = lerp(lv0.cityAlpha, 0, smooth(clamp(u * 1.4)));
+        cityRise = lerp(lv0.cityRise, 0, easeOut(clamp(u * 1.2)));
+        webAlpha = smooth(clamp((u - 0.3) / 0.7));
+        webBuild = easeOut(clamp((u - 0.35) / 0.65));
+        swarmAlpha = swarmIn * (1 - smooth(clamp((u - 0.6) / 0.4)));
+      } else if (phase === 'web') {
+        rainK = toward(rainK, 0.35, 0.05); cityAlpha = 0; webAlpha = 1; webBuild = 1; swarmAlpha = 0;
       } else {
-        rainK = smooth(u);
-        cityAlpha = 1 - smooth(clamp(u * 1.4));
-        cityRise = 1 - easeOut(clamp(u * 1.2));
+        rainK = lerp(lv0.rainK, 1, smooth(u));
+        cityAlpha = lerp(lv0.cityAlpha, 0, smooth(clamp(u * 1.4)));
+        cityRise = lerp(lv0.cityRise, 0, easeOut(clamp(u * 1.2)));
+        webAlpha = lerp(lv0.webAlpha, 0, smooth(clamp(u * 1.4)));
         swarmAlpha = smooth(clamp(u * 3));
       }
 
-      const nowScene = phase === 'city' || (phase === 'toCity' && u > 0.35) || (phase === 'toAI' && u < 0.4) ? 'city' : 'ai';
+      // 遷移の前半は、まだ前の場面の名前を出しておく
+      const early = { toCity: 0.35, toWeb: 0.35, toAI: 0.4 }[phase];
+      const nowScene = early !== undefined && u < early ? source : SCENE_OF[phase];
       if (nowScene !== scene) { scene = nowScene; if (opts.onScene) opts.onScene(scene); }
 
-      const speedK = phase === 'toCity' ? 0.25 + 0.75 * u : phase === 'city' ? 1 : phase === 'toAI' ? 1 - 0.7 * u : 0;
+      const fromCity = source === 'city';
+      const speedK = phase === 'toCity' ? 0.25 + 0.75 * u : phase === 'city' ? 1
+        : (phase === 'toAI' || phase === 'toWeb') && fromCity ? 1 - 0.7 * u : 0;
       if (speedK > 0) city.step(dt, speedK);
+      if (web && webAlpha > 0.001) web.update(dt, now, mouse);
 
       // 集合体の中心は、カーソルの方へ少しだけ寄っていく
       const b = base(), R = radius();
@@ -354,8 +390,11 @@
       center.y += (gy - center.y) * Math.min(1, 0.05 * dt);
       yaw += 0.004 * dt;
 
+      if (phase === 'city' || phase === 'web') return;   // 点は隠れているので動かさない
+
       const settle = phase === 'cluster' ? clamp((now - phaseStart) / 1500) : 0;
       const cap = phase === 'toAI' && u < 0.4 ? 5 : 1.4;
+      const webTargets = phase === 'toWeb' && web ? web.targets(N, now) : null;
       parts.forEach((p, i) => {
         let tx = null, ty = null, k = 0, damp = 0.985;
         p.depth = 1;
@@ -363,13 +402,13 @@
           const r = clusterTarget(i, now, R);
           tx = r[0]; ty = r[1]; p.depth = r[2];
           k = 0.004 + 0.03 * settle; damp = 0.86;
-        } else if ((phase === 'toCity' || phase === 'city') && refs[i]) {
+        } else if (phase === 'toCity' && refs[i]) {
           const pos = city.refPos(refs[i], cityRise);
           if (pos) refs[i].last = pos;
-          if (refs[i].last) {
-            tx = refs[i].last[0]; ty = refs[i].last[1];
-            k = phase === 'city' ? 0.25 : 0.02 + 0.14 * smooth(u); damp = 0.8;
-          }
+          if (refs[i].last) { tx = refs[i].last[0]; ty = refs[i].last[1]; k = 0.02 + 0.14 * smooth(u); damp = 0.8; }
+        } else if (webTargets && webTargets[i]) {
+          tx = webTargets[i][0]; ty = webTargets[i][1];
+          k = 0.02 + 0.14 * smooth(clamp((u - 0.1) / 0.9)); damp = 0.8;
         }
 
         if (tx !== null) {
@@ -446,16 +485,17 @@
     function draw (now) {
       ctx.clearRect(0, 0, W, H);
       if (cityAlpha > 0.001) city.draw(ctx, now, cityAlpha, cityRise);
+      if (web && webAlpha > 0.001) web.draw(ctx, now, webAlpha, webBuild);
 
       linkCount = 0;
       if (swarmAlpha > 0.01) {
         const u = clamp((now - phaseStart) / PH[phase]);
         const L = phase === 'cluster' ? (narrow ? 34 : 46)
-          : phase === 'toCity' ? lerp(narrow ? 70 : 92, 20, smooth(u))
+          : phase === 'toCity' || phase === 'toWeb' ? lerp(narrow ? 70 : 92, 20, smooth(u))
           : (narrow ? 70 : 92);
         linkCount = proximity(L, [0.5, 0.3, 0.16, 0.07], swarmAlpha);
 
-        if (mouse.active && phase !== 'toCity') {
+        if (mouse.active && phase !== 'toCity' && phase !== 'toWeb') {
           const path = new Path2D();
           for (const p of parts) if (Math.hypot(p.x - mouse.x, p.y - mouse.y) < 170) { path.moveTo(mouse.x, mouse.y); path.lineTo(p.x, p.y); }
           ctx.strokeStyle = `rgba(200,165,255,${0.26 * swarmAlpha})`;
@@ -483,7 +523,7 @@
     function stats (now) {
       if (!opts.onStats || now - statsAt < 250) return;
       statsAt = now;
-      const state = { drift: 'LEARNING', cluster: 'THINKING', toCity: 'CONSTRUCTING', city: 'CITY', toAI: 'DISSOLVING' }[phase];
+      const state = { drift: 'LEARNING', cluster: 'THINKING', toCity: 'CONSTRUCTING', city: 'CITY', toWeb: 'COMPOSING', web: 'WEB', toAI: 'DISSOLVING' }[phase];
       opts.onStats({ nodes: N, links: linkCount, state });
     }
 
@@ -507,9 +547,11 @@
     });
     host.addEventListener('pointerleave', () => { mouse.active = false; mouse.x = mouse.y = -1e4; city.release(); });
     fg.addEventListener('click', e => {
-      if (phase === 'city' || phase === 'toCity') { city.boost(); return; }
       const r = fg.getBoundingClientRect();
-      pulses.push({ x: e.clientX - r.left, y: e.clientY - r.top, r: 4, a: 0.9 });
+      const x = e.clientX - r.left, y = e.clientY - r.top;
+      if (phase === 'city' || phase === 'toCity') { city.boost(); return; }
+      if ((phase === 'web' || phase === 'toWeb') && web) { web.click(x, y); return; }
+      pulses.push({ x, y, r: 4, a: 0.9 });
     });
     new IntersectionObserver(([en]) => { visible = en.isIntersecting; if (visible) start(); }).observe(fg);
     document.addEventListener('visibilitychange', () => { if (!document.hidden) start(); });
@@ -528,7 +570,40 @@
     }
 
     return {
-      show (name) { want = name === 'city' ? 'city' : name === 'ai' ? 'ai' : null; },
+      // 流れに沿って、その場面へ移る
+      show (name) { want = ['ai', 'city', 'web'].includes(name) ? name : null; },
+      // 途中の遷移を飛ばして、その場面が落ち着いた状態にする（見比べ・確認用）
+      jump (name) {
+        const now = performance.now();
+        if (name === 'web' && web) {
+          phase = 'web'; phaseStart = now; source = 'web';
+          rainK = 0.35; cityAlpha = 0; cityRise = 0; webAlpha = 1; webBuild = 1; swarmAlpha = 0;
+        } else if (name === 'city') {
+          phase = 'city'; phaseStart = now; source = 'city';
+          rainK = 0; cityAlpha = 1; cityRise = 1; webAlpha = 0; swarmAlpha = 0;
+        } else {
+          phase = 'cluster'; phaseStart = now; source = 'ai';
+          rainK = 1; cityAlpha = 0; webAlpha = 0; swarmAlpha = 1;
+        }
+        lv0 = { rainK, cityAlpha, cityRise, webAlpha, webBuild };
+        scene = SCENE_OF[phase];
+        if (opts.onScene) opts.onScene(scene);
+        if (reduce) draw(now);
+      },
+      // Webの形を差し替える。Webを表示中なら、今の輪郭から点を出して新しい形に組み直す
+      setWeb (renderer) {
+        const now = performance.now();
+        const showing = phase === 'web' || phase === 'toWeb';
+        if (showing && web) snapFrom('web', false, now);
+        web = renderer;
+        web.resize(W, H, narrow);
+        if (showing) {
+          lv0 = { rainK, cityAlpha, cityRise, webAlpha: 0, webBuild: 0 };
+          phase = 'toWeb'; phaseStart = now; source = 'web';
+          swarmAlpha = 1;
+        }
+        if (reduce) { webAlpha = 1; webBuild = 1; draw(now); }
+      },
       get scene () { return scene; },
     };
   }
