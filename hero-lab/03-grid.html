@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>03 HORIZON GRID — CROSSACTOR HERO LAB</title>
+<link rel="stylesheet" href="lab.css">
+<style>
+  :root{ --accent:#ff4fd8; }
+  body{ background:#04010c; }
+  .stage{ background:#04010c; }
+  #c{ position:absolute; inset:0; z-index:1; width:100%; height:100%; cursor:pointer; }
+  .stage::after{
+    content:""; position:absolute; inset:0; z-index:2; pointer-events:none;
+    background:
+      linear-gradient(90deg, rgba(4,1,12,.8) 0%, rgba(4,1,12,.3) 40%, rgba(4,1,12,0) 60%),
+      linear-gradient(180deg, rgba(4,1,12,0) 70%, rgba(4,1,12,.7) 100%);
+  }
+  .eyebrow{ color:#ff8ae6; }
+  .lab-nav__cta{ color:#ff8ae6; }
+  .grad{ background:linear-gradient(95deg, #3ae8ff, #ff4fd8); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .btn--solid{ color:#fff; background:linear-gradient(95deg, #ff4fd8, #8b5cf6); box-shadow:0 12px 40px -12px rgba(255,79,216,.85); }
+
+  .hud{
+    position:absolute; z-index:4; right:var(--edge); top:96px; margin:0;
+    font-family:var(--mono); font-size:11px; letter-spacing:.14em; line-height:2.1; text-align:right;
+    color:rgba(255,180,240,.62);
+  }
+  .hud b{ font-weight:400; color:#fff; }
+  .hint{
+    position:absolute; z-index:4; right:var(--edge); bottom:84px; margin:0;
+    font-family:var(--mono); font-size:10px; letter-spacing:.24em; color:rgba(255,255,255,.4);
+  }
+  @media (max-width:760px){
+    .stage::after{ background:linear-gradient(180deg, rgba(4,1,12,0) 40%, rgba(4,1,12,.9) 72%); }
+    .hud{ top:70px; font-size:10px; }
+    .hint{ display:none; }
+  }
+</style>
+</head>
+<body>
+
+<header class="lab-nav">
+  <a class="lab-nav__logo" href="index.html"><img src="../assets/logo-light.png" alt="CROSSACTOR" width="618" height="314"></a>
+  <nav class="lab-nav__links" aria-label="ページ内リンク"><a href="#">Services</a><a href="#">3D VR</a><a href="#">Web</a><a href="#">AI</a></nav>
+  <a class="lab-nav__cta" href="#">無料で相談</a>
+</header>
+
+<section class="stage">
+  <canvas id="c" aria-hidden="true"></canvas>
+  <div class="hud" aria-hidden="true">
+    <div>RENDER DISTANCE <b>90 M</b></div>
+    <div>STRUCTURES <b id="h-count">0</b></div>
+    <div>SPEED <b id="h-speed">0</b></div>
+  </div>
+
+  <div class="copy">
+    <p class="eyebrow rise" style="--d:.05s">AI INNOVATION STUDIO</p>
+    <h1 class="title rise" style="--d:.15s">まだ建っていない<wbr>街を、<br><span class="grad">先に歩く。</span></h1>
+    <p class="lead rise" style="--d:.28s">建つ前の建物を、AIと3Dで先に体験する。未来の風景を、今日の提案に変えます。</p>
+    <div class="actions rise" style="--d:.4s">
+      <a class="btn btn--solid" href="#">無料で相談する →</a>
+      <a class="btn btn--ghost" href="#">サービスを見る</a>
+    </div>
+  </div>
+  <p class="hint" aria-hidden="true">MOVE TO STEER ／ CLICK TO BOOST</p>
+</section>
+
+<script src="lab.js"></script>
+<script>
+/* グリッドの上を前進し、ワイヤーフレームのビルが地面から立ち上がる */
+(() => {
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const cv = document.getElementById('c');
+  const ctx = cv.getContext('2d');
+  const hudCount = document.getElementById('h-count');
+  const hudSpeed = document.getElementById('h-speed');
+  const rand = (a, b) => a + Math.random() * (b - a);
+  const clamp = (v, a = 0, b = 1) => Math.min(Math.max(v, a), b);
+
+  const FAR = 90;
+  let W = 0, H = 0, narrow = false;
+  const cam = { x: 0, tx: 0, y: 1.7, z: 0, pitch: 0, tpitch: 0 };
+  let boost = 0;
+  const stars = [];
+  const beams = [-34, -14, 9, 27, 46].map(x => ({ x, ph: rand(0, 6) }));
+
+  function spawn (z) {
+    const side = Math.random() < 0.5 ? -1 : 1;
+    const x = side * rand(4.5, 24);
+    return {
+      x, z, w: rand(1.6, 4), d: rand(1.6, 4),
+      h: rand(2.5, Math.abs(x) < 10 ? 9 : 17) * (Math.random() < 0.14 ? 1.8 : 1),
+      pink: Math.random() < 0.22, ant: Math.random() < 0.25,
+      win: Array.from({ length: 24 }, () => Math.random() < 0.35),
+    };
+  }
+  const blds = Array.from({ length: 48 }, () => spawn(rand(3, FAR)));
+
+  function resize () {
+    const dpr = Math.min(devicePixelRatio || 1, 2);
+    W = cv.clientWidth; H = cv.clientHeight; narrow = W < 760;
+    cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    stars.length = 0;
+    for (let i = 0; i < 160; i++) stars.push({ x: rand(0, W), y: rand(0, H * 0.5), a: rand(0.2, 0.9), p: rand(0, 6) });
+  }
+
+  const horizon = () => H * (narrow ? 0.36 : 0.47) + cam.pitch;
+  function proj (x, y, z) {
+    const dz = z - cam.z;
+    if (dz < 0.4) return null;
+    const f = H * 0.95;
+    return [W / 2 + ((x - cam.x) * f) / dz, horizon() - ((y - cam.y) * f) / dz];
+  }
+
+  function draw (t) {
+    const hz = horizon();
+    // 空と地平の光
+    const sky = ctx.createLinearGradient(0, 0, 0, hz);
+    sky.addColorStop(0, '#04010c'); sky.addColorStop(0.7, '#12052a'); sky.addColorStop(1, '#3b0c4f');
+    ctx.fillStyle = sky; ctx.fillRect(0, 0, W, hz);
+    ctx.fillStyle = '#05020d'; ctx.fillRect(0, hz, W, H - hz);
+    const glow = ctx.createRadialGradient(W / 2, hz, 0, W / 2, hz, W * 0.6);
+    glow.addColorStop(0, 'rgba(255,79,216,.45)'); glow.addColorStop(0.35, 'rgba(139,92,246,.16)'); glow.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = glow; ctx.fillRect(0, hz - W * 0.3, W, W * 0.6);
+
+    for (const s of stars) {
+      if (s.y > hz - 6) continue;
+      ctx.fillStyle = `rgba(255,255,255,${(s.a * (0.6 + 0.4 * Math.sin(t * 0.002 + s.p))).toFixed(3)})`;
+      ctx.fillRect(s.x, s.y, 1.2, 1.2);
+    }
+
+    // 地平から立ちのぼる光の柱
+    for (const b of beams) {
+      const p = proj(b.x, 0, cam.z + FAR);
+      if (!p) continue;
+      const a = 0.08 + 0.1 * (0.5 + 0.5 * Math.sin(t * 0.0012 + b.ph));
+      const g = ctx.createLinearGradient(0, hz, 0, hz - H * 0.45);
+      g.addColorStop(0, `rgba(58,232,255,${a})`); g.addColorStop(1, 'rgba(58,232,255,0)');
+      ctx.fillStyle = g; ctx.fillRect(p[0] - 3, hz - H * 0.45, 6, H * 0.45);
+    }
+
+    // グリッド
+    const alphaPaths = [new Path2D(), new Path2D(), new Path2D(), new Path2D()];
+    const bucket = dz => Math.min(3, Math.floor((dz / FAR) * 4));
+    for (let x = -40; x <= 40; x += 2) {
+      const a = proj(x, 0, cam.z + 0.5), b = proj(x, 0, cam.z + FAR);
+      if (a && b) { alphaPaths[0].moveTo(a[0], a[1]); alphaPaths[0].lineTo(b[0], b[1]); }
+    }
+    for (let z = Math.ceil(cam.z / 2) * 2; z < cam.z + FAR; z += 2) {
+      const a = proj(-40, 0, z), b = proj(40, 0, z);
+      if (a && b) { const k = bucket(z - cam.z); alphaPaths[k].moveTo(a[0], a[1]); alphaPaths[k].lineTo(b[0], b[1]); }
+    }
+    const ga = [0.5, 0.28, 0.14, 0.06];
+    ctx.lineWidth = 1;
+    alphaPaths.forEach((p, k) => { ctx.strokeStyle = `rgba(58,232,255,${ga[k]})`; ctx.stroke(p); });
+
+    // 中央の破線
+    ctx.strokeStyle = 'rgba(255,79,216,.8)'; ctx.lineWidth = 2;
+    for (let z = Math.ceil(cam.z / 4) * 4; z < cam.z + 40; z += 4) {
+      const a = proj(0, 0, z), b = proj(0, 0, z + 1.6);
+      if (a && b) { ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.stroke(); }
+    }
+
+    // ビル：遠い順に描いて、手前が奥を隠すようにする
+    blds.sort((a, b) => b.z - a.z);
+    let visible = 0;
+    for (const b of blds) {
+      const dz = b.z - cam.z;
+      if (dz < 1.2 || dz > FAR) continue;
+      visible++;
+      const rise = 1 - Math.pow(1 - clamp((FAR - dz) / 16), 3);
+      const h = b.h * rise;
+      const fog = Math.pow(clamp(1 - dz / FAR), 1.1);
+      const x0 = b.x - b.w / 2, x1 = b.x + b.w / 2, zf = b.z - b.d / 2, zb = b.z + b.d / 2;
+      const P = [
+        proj(x0, 0, zf), proj(x1, 0, zf), proj(x1, h, zf), proj(x0, h, zf),
+        proj(x0, 0, zb), proj(x1, 0, zb), proj(x1, h, zb), proj(x0, h, zb),
+      ];
+      if (P.some(p => !p)) continue;
+      const poly = idx => { ctx.beginPath(); idx.forEach((i, k) => (k ? ctx.lineTo(P[i][0], P[i][1]) : ctx.moveTo(P[i][0], P[i][1]))); ctx.closePath(); };
+
+      ctx.fillStyle = 'rgba(6,3,16,.94)';
+      const side = b.x > cam.x ? [0, 3, 7, 4] : [1, 2, 6, 5];
+      poly(side); ctx.fill();
+      poly([0, 1, 2, 3]); ctx.fill();
+
+      const col = b.pink ? '255,79,216' : '58,232,255';
+      ctx.strokeStyle = `rgba(${col},${(0.85 * fog).toFixed(3)})`;
+      ctx.lineWidth = 1.1;
+      poly([0, 1, 2, 3]); ctx.stroke();
+      poly(side); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(P[3][0], P[3][1]); ctx.lineTo(P[7][0], P[7][1]); ctx.lineTo(P[6][0], P[6][1]); ctx.lineTo(P[2][0], P[2][1]); ctx.stroke();
+
+      // 窓の灯り
+      ctx.fillStyle = `rgba(255,236,190,${(0.75 * fog * rise).toFixed(3)})`;
+      for (let r = 0; r < 6; r++) for (let c = 0; c < 4; c++) {
+        if (!b.win[r * 4 + c]) continue;
+        const wy = h * (0.15 + r * 0.14);
+        if (wy > h - 0.3) continue;
+        const p = proj(x0 + b.w * (0.2 + c * 0.2), wy, zf);
+        if (p) ctx.fillRect(p[0] - 1, p[1] - 1, 2, 2);
+      }
+      if (b.ant && rise > 0.95) {
+        const a = proj(b.x, h, b.z), c = proj(b.x, h + 1.4, b.z);
+        if (a && c) {
+          ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(c[0], c[1]); ctx.stroke();
+          if (Math.sin(t * 0.006 + b.x) > 0.3) { ctx.fillStyle = `rgba(255,60,90,${fog})`; ctx.fillRect(c[0] - 1.5, c[1] - 1.5, 3, 3); }
+        }
+      }
+    }
+    return visible;
+  }
+
+  let last = performance.now(), hudAt = 0;
+  function loop (now) {
+    const dt = Math.min((now - last) / 16.667, 3); last = now;
+    cam.x += (cam.tx - cam.x) * 0.04;
+    cam.pitch += (cam.tpitch - cam.pitch) * 0.05;
+    const speed = 0.14 + boost;
+    cam.z += speed * dt;
+    boost *= Math.pow(0.95, dt);
+    for (const b of blds) if (b.z - cam.z < 1.2) Object.assign(b, spawn(cam.z + FAR + rand(0, 12)));
+    const v = draw(now);
+    if (now - hudAt > 200) { hudCount.textContent = String(v); hudSpeed.textContent = `${Math.round(speed * 216)} KM/H`; hudAt = now; }
+    requestAnimationFrame(loop);
+  }
+
+  const stage = cv.parentElement;
+  stage.addEventListener('pointermove', e => {
+    cam.tx = (e.clientX / innerWidth - 0.5) * 10;
+    cam.tpitch = -(e.clientY / innerHeight - 0.5) * 60;
+  });
+  stage.addEventListener('pointerleave', () => { cam.tx = 0; cam.tpitch = 0; });
+  cv.addEventListener('click', () => { boost = 0.7; });
+  window.addEventListener('resize', resize);
+
+  resize();
+  if (reduce) { cam.z = 10; draw(0); return; }
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>

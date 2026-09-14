@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>05 VISION SCAN — CROSSACTOR HERO LAB</title>
+<link rel="stylesheet" href="lab.css">
+<style>
+  :root{ --accent:#ffb020; --amber:#ffb020; --cyan:#3ae8ff; }
+  body{ background:#020306; }
+  .stage{ background:#020306; }
+  #c{ position:absolute; inset:0; z-index:1; width:100%; height:100%; cursor:none; }
+  .stage::after{
+    content:""; position:absolute; inset:0; z-index:2; pointer-events:none;
+    background:
+      linear-gradient(90deg, rgba(2,3,6,.88) 0%, rgba(2,3,6,.5) 34%, rgba(2,3,6,0) 56%),
+      linear-gradient(180deg, rgba(2,3,6,.55) 0%, rgba(2,3,6,0) 18%, rgba(2,3,6,0) 70%, rgba(2,3,6,.7) 100%);
+  }
+  .eyebrow{ color:var(--amber); }
+  .lab-nav__cta{ color:var(--amber); }
+  .grad{ background:linear-gradient(95deg, #ffb020, #ffd98a 45%, #3ae8ff); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .btn--solid{ box-shadow:0 12px 40px -12px rgba(255,176,32,.8); }
+
+  .hud{
+    position:absolute; z-index:4; right:var(--edge); top:96px; width:220px;
+    font-family:var(--mono); font-size:11px; letter-spacing:.12em; line-height:2.1;
+    color:rgba(255,220,160,.7);
+  }
+  .hud div{ display:flex; justify-content:space-between; }
+  .hud b{ font-weight:400; color:#fff; }
+  .hud__bar{ height:2px; margin-top:6px; background:rgba(255,176,32,.2); }
+  .hud__bar i{ display:block; height:100%; width:0; background:var(--amber); box-shadow:0 0 8px var(--amber); }
+  .cap{
+    position:absolute; z-index:4; right:var(--edge); bottom:84px; margin:0;
+    font-size:11px; color:rgba(255,255,255,.45);
+  }
+  @media (max-width:760px){
+    .stage::after{ background:linear-gradient(180deg, rgba(2,3,6,.5) 0%, rgba(2,3,6,0) 20%, rgba(2,3,6,0) 38%, rgba(2,3,6,.92) 66%); }
+    .hud{ top:70px; width:170px; font-size:10px; }
+    .cap{ display:none; }
+    #c{ cursor:auto; }
+  }
+</style>
+</head>
+<body>
+
+<header class="lab-nav">
+  <a class="lab-nav__logo" href="index.html"><img src="../assets/logo-light.png" alt="CROSSACTOR" width="618" height="314"></a>
+  <nav class="lab-nav__links" aria-label="ページ内リンク"><a href="#">Services</a><a href="#">3D VR</a><a href="#">Web</a><a href="#">AI</a></nav>
+  <a class="lab-nav__cta" href="#">無料で相談</a>
+</header>
+
+<section class="stage">
+  <canvas id="c" aria-hidden="true"></canvas>
+  <div class="hud" aria-hidden="true">
+    <div><span>MODE</span><b id="h-mode">SPATIAL SCAN</b></div>
+    <div><span>OBJECTS</span><b id="h-obj">0 / 9</b></div>
+    <div><span>SCAN</span><b id="h-pct">0%</b></div>
+    <div class="hud__bar"><i id="h-bar"></i></div>
+  </div>
+
+  <div class="copy">
+    <p class="eyebrow rise" style="--d:.05s">AI INNOVATION STUDIO</p>
+    <h1 class="title rise" style="--d:.15s">AIが、空間を<wbr><span class="grad">読み解く。</span></h1>
+    <p class="lead rise" style="--d:.28s">写真や図面から空間を読み取り、3D VR・Web・提案資料へ。見えている情報を、伝わる体験に変えます。</p>
+    <div class="actions rise" style="--d:.4s">
+      <a class="btn btn--solid" href="#">無料で相談する →</a>
+      <a class="btn btn--ghost" href="#">サービスを見る</a>
+    </div>
+  </div>
+  <p class="cap">※ 解析の流れをイメージした演出です（画像は制作実例）</p>
+</section>
+
+<script src="lab.js"></script>
+<script>
+/* 完成パースをレーザーで走査する。未走査は輪郭線、走査済みは写真。通過した物にラベルが付く */
+(() => {
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const cv = document.getElementById('c');
+  const ctx = cv.getContext('2d');
+  const hud = { mode: document.getElementById('h-mode'), obj: document.getElementById('h-obj'), pct: document.getElementById('h-pct'), bar: document.getElementById('h-bar') };
+  const clamp = (v, a = 0, b = 1) => Math.min(Math.max(v, a), b);
+
+  // 画像内の位置（0〜1）。ARCH は建物側の要素、FURN は家具
+  const ARCH = '58,232,255', FURN = '255,176,32';
+  const OBJECTS = [
+    { en: 'CEILING LIGHT', ja: '間接照明', box: [0.26, 0.02, 0.75, 0.27], c: ARCH, p: 0.96 },
+    { en: 'PLANT', ja: '観葉植物', box: [0.03, 0.33, 0.19, 0.67], c: FURN, p: 0.91 },
+    { en: 'WINDOW', ja: '引き違い窓', box: [0.23, 0.2, 0.48, 0.62], c: ARCH, p: 0.94 },
+    { en: 'SOFA', ja: 'ソファ', box: [0.1, 0.55, 0.58, 0.99], c: FURN, p: 0.97 },
+    { en: 'COFFEE TABLE', ja: 'センターテーブル', box: [0.5, 0.69, 0.72, 0.93], c: FURN, p: 0.93 },
+    { en: 'TV', ja: 'テレビ', box: [0.59, 0.38, 0.77, 0.56], c: FURN, p: 0.98 },
+    { en: 'TV BOARD', ja: '造作カウンター', box: [0.54, 0.57, 0.84, 0.72], c: ARCH, p: 0.89 },
+    { en: 'DECOR', ja: '装飾', box: [0.78, 0.41, 0.95, 0.8], c: FURN, p: 0.86 },
+    { en: 'COUNTER', ja: 'キッチンカウンター', box: [0.91, 0.51, 1.0, 0.99], c: ARCH, p: 0.9 },
+  ];
+  const SCAN = 5600, HOLD = 2600, RESET = 900;
+
+  let W = 0, H = 0, narrow = false;
+  let photo = null, edges = null;
+  let phase = 'scan', phaseStart = performance.now();
+  const mouse = { x: -1e4, y: -1e4, on: false };
+
+  // 画像の輪郭を Sobel で取り出して、シアンの線画にしておく
+  function buildEdges (img) {
+    const w = 960, h = Math.round((img.height / img.width) * w);
+    const src = document.createElement('canvas'); src.width = w; src.height = h;
+    const s = src.getContext('2d'); s.drawImage(img, 0, 0, w, h);
+    const px = s.getImageData(0, 0, w, h).data;
+    const g = new Float32Array(w * h);
+    for (let i = 0; i < w * h; i++) g[i] = px[i * 4] * 0.3 + px[i * 4 + 1] * 0.59 + px[i * 4 + 2] * 0.11;
+    const out = s.createImageData(w, h);
+    for (let y = 1; y < h - 1; y++) for (let x = 1; x < w - 1; x++) {
+      const i = y * w + x;
+      const gx = -g[i - w - 1] - 2 * g[i - 1] - g[i + w - 1] + g[i - w + 1] + 2 * g[i + 1] + g[i + w + 1];
+      const gy = -g[i - w - 1] - 2 * g[i - w] - g[i - w + 1] + g[i + w - 1] + 2 * g[i + w] + g[i + w + 1];
+      const m = Math.min(255, Math.hypot(gx, gy) * 1.4);
+      const a = m < 40 ? 0 : m;
+      out.data[i * 4] = 90; out.data[i * 4 + 1] = 225; out.data[i * 4 + 2] = 255; out.data[i * 4 + 3] = a;
+    }
+    const e = document.createElement('canvas'); e.width = w; e.height = h;
+    e.getContext('2d').putImageData(out, 0, 0);
+    return e;
+  }
+
+  // 画面いっぱいに収める（はみ出す分は切る）ときの、画像→画面の対応
+  function cover (iw, ih) {
+    const s = Math.max(W / iw, H / ih);
+    const dw = iw * s, dh = ih * s;
+    const ox = narrow ? (W - dw) * 0.35 : W - dw;   // PC は右寄せにして文字の側を空ける
+    return { dx: ox, dy: (H - dh) / 2, dw, dh };
+  }
+  const toScreen = (m, nx, ny) => [m.dx + nx * m.dw, m.dy + ny * m.dh];
+
+  function resize () {
+    const dpr = Math.min(devicePixelRatio || 1, 2);
+    W = cv.clientWidth; H = cv.clientHeight; narrow = W < 760;
+    cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  function drawPhoto (m) {
+    ctx.save();
+    ctx.filter = 'saturate(1.05) contrast(1.05)';
+    ctx.drawImage(photo, m.dx, m.dy, m.dw, m.dh);
+    ctx.restore();
+  }
+  function drawWire (m, t) {
+    ctx.fillStyle = '#03060b'; ctx.fillRect(0, 0, W, H);
+    ctx.globalAlpha = 0.85;
+    ctx.drawImage(edges, m.dx, m.dy, m.dw, m.dh);
+    ctx.globalAlpha = 1;
+    // 奥行きを測っているような点の格子
+    ctx.fillStyle = 'rgba(58,232,255,.16)';
+    const step = 26, off = (t * 0.01) % step;
+    for (let y = off; y < H; y += step) for (let x = 0; x < W; x += step) ctx.fillRect(x, y, 1, 1);
+  }
+
+  function bracket (x0, y0, x1, y1, len, col, a) {
+    ctx.strokeStyle = `rgba(${col},${a})`; ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    [[x0, y0, 1, 1], [x1, y0, -1, 1], [x0, y1, 1, -1], [x1, y1, -1, -1]].forEach(([x, y, sx, sy]) => {
+      ctx.moveTo(x + sx * len, y); ctx.lineTo(x, y); ctx.lineTo(x, y + sy * len);
+    });
+    ctx.stroke();
+    ctx.fillStyle = `rgba(${col},${a * 0.06})`;
+    ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
+  }
+
+  function frame (now) {
+    if (!photo) return;
+    const m = cover(photo.width, photo.height);
+    const el = now - phaseStart;
+    let k = 1, fade = 1;
+    if (phase === 'scan') { k = clamp(el / SCAN); if (k >= 1) { phase = 'hold'; phaseStart = now; } }
+    else if (phase === 'hold') { k = 1; if (el > HOLD) { phase = 'reset'; phaseStart = now; } }
+    else { k = 1; fade = 1 - clamp(el / RESET); if (el > RESET) { phase = 'scan'; phaseStart = now; k = 0; } }
+    if (reduce) { phase = 'hold'; k = 1; fade = 1; }
+
+    // 走査線の位置（画像の左端から右端まで）
+    const left = Math.max(0, m.dx), right = Math.min(W, m.dx + m.dw);
+    const sx = phase === 'reset' ? left + (right - left) * fade : left + (right - left) * (1 - Math.pow(1 - k, 1.6));
+
+    drawWire(m, now);
+    ctx.save(); ctx.beginPath(); ctx.rect(0, 0, sx, H); ctx.clip(); drawPhoto(m); ctx.restore();
+
+    // 走査線：光の帯と目盛り
+    if (sx > left + 1 && sx < right - 1) {
+      const band = ctx.createLinearGradient(sx - 140, 0, sx, 0);
+      band.addColorStop(0, 'rgba(255,176,32,0)'); band.addColorStop(1, 'rgba(255,176,32,.28)');
+      ctx.fillStyle = band; ctx.fillRect(sx - 140, 0, 140, H);
+      ctx.fillStyle = '#ffd98a'; ctx.shadowColor = '#ffb020'; ctx.shadowBlur = 18;
+      ctx.fillRect(sx - 1, 0, 2, H);
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = 'rgba(255,217,138,.8)';
+      for (let y = 0; y < H; y += 24) ctx.fillRect(sx + 4, y, y % 120 === 0 ? 10 : 4, 1);
+    }
+
+    // 検出ラベル
+    let found = 0;
+    const fs = narrow ? 9 : 11;
+    OBJECTS.forEach(o => {
+      const [x0, y0] = toScreen(m, o.box[0], o.box[1]);
+      const [x1, y1] = toScreen(m, o.box[2], o.box[3]);
+      const a = clamp((sx - x0) / 90) * fade;
+      if (a <= 0) return;
+      found++;
+      const inset = 4;
+      bracket(x0 + inset, y0 + inset, x1 - inset, y1 - inset, 16 * a, o.c, a);
+      const conf = (o.p * clamp((sx - x0) / 160)).toFixed(2);
+      const label = `${o.en}  ${o.ja}  ${conf}`;
+      ctx.font = `${fs}px "Space Mono", monospace`;
+      const tw = ctx.measureText(label).width + 12;
+      const ly = y0 + inset < 72 ? y0 + inset + 2 : y0 + inset - fs - 10;
+      // スマホではナビとHUDの帯（上から150px）にかかるラベルは出さない。枠だけ残す
+      if (narrow && ly < 150) return;
+      ctx.fillStyle = `rgba(2,3,6,${0.78 * a})`; ctx.fillRect(x0 + inset, ly, tw, fs + 8);
+      ctx.fillStyle = `rgba(${o.c},${a})`; ctx.fillRect(x0 + inset, ly, 2, fs + 8);
+      ctx.fillStyle = `rgba(255,255,255,${a})`; ctx.textBaseline = 'top';
+      ctx.fillText(label, x0 + inset + 7, ly + 4);
+    });
+
+    // カーソルのレンズ：円の中だけ、もう一方の見え方を出す
+    if (mouse.on && !narrow) {
+      const r = 90;
+      ctx.save();
+      ctx.beginPath(); ctx.arc(mouse.x, mouse.y, r, 0, Math.PI * 2); ctx.clip();
+      if (mouse.x < sx) drawWire(m, now); else drawPhoto(m);
+      ctx.restore();
+      ctx.strokeStyle = 'rgba(255,217,138,.9)'; ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.arc(mouse.x, mouse.y, r, 0, Math.PI * 2); ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(mouse.x - 10, mouse.y); ctx.lineTo(mouse.x + 10, mouse.y);
+      ctx.moveTo(mouse.x, mouse.y - 10); ctx.lineTo(mouse.x, mouse.y + 10);
+      ctx.stroke();
+      const nx = (mouse.x - m.dx) / m.dw, ny = (mouse.y - m.dy) / m.dh;
+      ctx.font = '10px "Space Mono", monospace'; ctx.fillStyle = 'rgba(255,217,138,.95)'; ctx.textBaseline = 'top';
+      ctx.fillText(`X ${nx.toFixed(3)}  Y ${ny.toFixed(3)}`, mouse.x + r * 0.72, mouse.y + r * 0.72);
+    }
+
+    hud.obj.textContent = `${found} / ${OBJECTS.length}`;
+    const pct = Math.round(clamp((sx - left) / (right - left)) * 100);
+    hud.pct.textContent = `${pct}%`;
+    hud.bar.style.width = `${pct}%`;
+    hud.mode.textContent = phase === 'hold' ? 'COMPLETE' : phase === 'reset' ? 'RESET' : 'SPATIAL SCAN';
+  }
+
+  const stage = cv.parentElement;
+  stage.addEventListener('pointermove', e => { const r = cv.getBoundingClientRect(); mouse.x = e.clientX - r.left; mouse.y = e.clientY - r.top; mouse.on = true; });
+  stage.addEventListener('pointerleave', () => { mouse.on = false; });
+  cv.addEventListener('click', () => { phase = 'scan'; phaseStart = performance.now(); });   // クリックで走査をやり直す
+  window.addEventListener('resize', () => { resize(); if (reduce) frame(performance.now()); });
+
+  const img = new Image();
+  img.src = '../assets/render-living.webp';
+  img.decode().then(() => document.fonts.load('11px "Space Mono"')).then(() => {
+    photo = img; edges = buildEdges(img);
+    resize();
+    if (reduce) { frame(performance.now()); return; }
+    (function loop (now) { frame(now); requestAnimationFrame(loop); })(performance.now());
+  });
+})();
+</script>
+</body>
+</html>

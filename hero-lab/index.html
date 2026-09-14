@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HERO LAB — CROSSACTOR トップの5パターン</title>
+<link rel="stylesheet" href="lab.css">
+<style>
+  body{ background:#05060a; }
+  .gallery{ width:min(100% - 48px, 1180px); margin:0 auto; padding:120px 0 80px; }
+  .gallery h1{ margin:0 0 10px; font-size:clamp(28px, 4vw, 44px); }
+  .gallery > p{ margin:0 0 44px; color:var(--muted); max-width:46em; }
+  .cards{ display:grid; grid-template-columns:repeat(auto-fit, minmax(300px, 1fr)); gap:16px; }
+  .card{
+    position:relative; overflow:hidden; display:flex; flex-direction:column;
+    min-height:250px; padding:26px 24px 22px; text-decoration:none;
+    border:1px solid rgba(255,255,255,.12); background:#0a0b12;
+    transition:transform .4s var(--ease), border-color .4s var(--ease);
+  }
+  .card::before{ content:""; position:absolute; inset:0 0 auto 0; height:3px; background:var(--c); }
+  .card::after{
+    content:""; position:absolute; right:-80px; top:-80px; width:220px; height:220px; border-radius:50%;
+    background:radial-gradient(circle, var(--c), transparent 70%); opacity:.22; pointer-events:none;
+  }
+  .card:hover{ transform:translateY(-4px); border-color:rgba(255,255,255,.3); }
+  .card__no{ font-family:var(--mono); font-size:40px; line-height:1; color:transparent; -webkit-text-stroke:1px var(--c); }
+  .card h2{ margin:14px 0 6px; font-family:var(--mono); font-size:17px; letter-spacing:.1em; }
+  .card p{ margin:0 0 18px; color:var(--muted); font-size:14px; line-height:1.8; }
+  .tags{ display:flex; flex-wrap:wrap; gap:6px; margin-top:auto; }
+  .tags span{ padding:2px 8px; font-size:11.5px; border:1px solid rgba(255,255,255,.18); color:var(--text); }
+  .card--now{ --c:#7aba2a; }
+  .note{ margin:36px 0 0; font-size:12.5px; color:var(--faint); }
+</style>
+</head>
+<body>
+
+<header class="lab-nav">
+  <a class="lab-nav__logo" href="../index.html"><img src="../assets/logo-light.png" alt="CROSSACTOR" width="618" height="314"></a>
+  <nav class="lab-nav__links" aria-label="サイト"><a href="../index.html">本番のトップへ</a></nav>
+</header>
+
+<main class="gallery">
+  <h1>HERO LAB</h1>
+  <p>トップの「動きだけ」の部分を5パターン用意しました。見出し・ボタン・ナビはそろえてあるので、動きと見た目の違いだけで比べられます。各ページの下のバー（または ← → キー）で切り替えられます。</p>
+
+  <div class="cards">
+    <a class="card" href="01-neural.html" style="--c:#6ee7ff">
+      <span class="card__no">01</span>
+      <h2>NEURAL FIELD</h2>
+      <p>粒子がニューラルネットのようにつながり、ときどき「AI」「3D VR」「WEB」の文字に集まる。カーソルに線が伸び、クリックで信号が走る。</p>
+      <div class="tags"><span>AI感 ◎</span><span>未来感 ○</span><span>深い紺×シアン</span></div>
+    </a>
+    <a class="card" href="02-terminal.html" style="--c:#5dffb6">
+      <span class="card__no">02</span>
+      <h2>AI TERMINAL</h2>
+      <p>ターミナルに相談が打ち込まれ、AIが手順と提案を返していく。背景に言葉が立ちのぼり、見出しにグリッチ。</p>
+      <div class="tags"><span>AI感 ◎</span><span>未来感 ○</span><span>黒×蛍光グリーン</span></div>
+    </a>
+    <a class="card" href="03-grid.html" style="--c:#ff4fd8">
+      <span class="card__no">03</span>
+      <h2>HORIZON GRID</h2>
+      <p>グリッドの上を前へ進み、ワイヤーフレームのビルが地面から立ち上がる。マウスで進路、クリックで加速。</p>
+      <div class="tags"><span>AI感 ○</span><span>未来感 ◎</span><span>建築とつながる</span></div>
+    </a>
+    <a class="card" href="04-aurora.html" style="--c:#b18cff">
+      <span class="card__no">04</span>
+      <h2>LIQUID AURORA</h2>
+      <p>虹色に光る液体の球体がカーソルに引き寄せられて形を変え、すりガラスのカードが漂う。明るい近未来。</p>
+      <div class="tags"><span>AI感 ○</span><span>未来感 ◎</span><span>ライトテーマ</span></div>
+    </a>
+    <a class="card" href="05-scan.html" style="--c:#ffb020">
+      <span class="card__no">05</span>
+      <h2>VISION SCAN</h2>
+      <p>自社の完成パースをレーザーが走査し、線画に変わりながら「AIが検出した」ようなラベルが付いていく。</p>
+      <div class="tags"><span>AI感 ◎</span><span>未来感 ◎</span><span>事業に直結</span></div>
+    </a>
+    <a class="card card--now" href="../index.html">
+      <span class="card__no">00</span>
+      <h2>CURRENT（今のトップ）</h2>
+      <p>線だけの3Dモデルが 家 → Webサイト → AI と組み替わる、いまのトップ。比較の基準に。</p>
+      <div class="tags"><span>AI感 ○</span><span>未来感 ○</span><span>ブランド色</span></div>
+    </a>
+  </div>
+
+  <p class="note">02 の会話と 05 の検出ラベルは、相談や解析の流れをイメージした演出です（実際にAIが動いているわけではありません）。</p>
+</main>
+
+</body>
+</html>

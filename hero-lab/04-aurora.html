@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>04 LIQUID AURORA — CROSSACTOR HERO LAB</title>
+<link rel="stylesheet" href="lab.css">
+<style>
+  /* ライトテーマ：他の4つと違う「やわらかい近未来」 */
+  :root{ --text:#0b0d18; --muted:rgba(11,13,24,.62); --faint:rgba(11,13,24,.4); --accent:#0b0d18; }
+  body{ background:#eef0f7; color:var(--text); }
+  .stage{ background:#eef0f7; }
+  .blob{
+    position:absolute; z-index:0; border-radius:50%; pointer-events:none;
+    filter:blur(70px); opacity:.75; mix-blend-mode:multiply;
+    animation:drift var(--t, 18s) ease-in-out infinite alternate;
+  }
+  .blob--1{ width:48vmax; height:48vmax; left:-10vmax; top:-14vmax; background:#9be7ff; --t:16s; }
+  .blob--2{ width:44vmax; height:44vmax; right:-8vmax; top:-6vmax; background:#c9adff; --t:21s; }
+  .blob--3{ width:40vmax; height:40vmax; right:12vmax; bottom:-18vmax; background:#ffb8e2; --t:19s; }
+  .blob--4{ width:34vmax; height:34vmax; left:18vmax; bottom:-16vmax; background:#ffe2a6; --t:24s; }
+  @keyframes drift{
+    from{ transform:translate(0, 0) scale(1); }
+    to  { transform:translate(6vmax, 4vmax) scale(1.12); }
+  }
+  /* 粒子感（紙のようなノイズ）を薄く重ねる */
+  .grain{
+    position:absolute; inset:0; z-index:3; pointer-events:none; opacity:.22; mix-blend-mode:multiply;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.4  0 0 0 0 0.4  0 0 0 0 0.5  0 0 0 .5 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+  }
+  #orb{ position:absolute; inset:0; z-index:2; width:100%; height:100%; }
+
+  .lab-nav__word{ color:var(--text); }
+  .lab-nav__links a{ color:var(--muted); }
+  .lab-nav__links a:hover{ color:var(--text); }
+  .lab-nav__cta{ color:var(--text); }
+  .eyebrow{ color:#5b5fff; }
+  .title{ font-weight:700; letter-spacing:0; }
+  .grad{ background:linear-gradient(90deg, #4f7cff, #a35cff 50%, #ff5fa8); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .btn--solid{ background:#0b0d18; color:#fff; border-radius:999px; box-shadow:0 14px 40px -14px rgba(60,40,140,.6); }
+  .btn--ghost{ border-color:rgba(11,13,24,.25); color:var(--text); border-radius:999px; background:rgba(255,255,255,.4); }
+
+  .glass{
+    position:absolute; z-index:5; pointer-events:none;
+    padding:14px 18px 12px; min-width:170px;
+    background:rgba(255,255,255,.38); border:1px solid rgba(255,255,255,.8); border-radius:18px;
+    backdrop-filter:blur(16px) saturate(1.3); -webkit-backdrop-filter:blur(16px) saturate(1.3);
+    box-shadow:0 20px 50px -20px rgba(60,40,140,.35);
+    transform:translate3d(var(--px, 0), var(--py, 0), 0);
+    transition:transform .6s var(--ease);
+  }
+  .glass__in{ animation:bob var(--b, 6s) ease-in-out infinite alternate; }
+  @keyframes bob{ to{ transform:translateY(-10px); } }
+  .glass b{ display:block; font-family:var(--mono); font-size:11px; letter-spacing:.14em; color:#5b5fff; }
+  .glass span{ font-size:13.5px; color:var(--text); }
+  .glass i{ display:inline-block; width:7px; height:7px; margin-right:7px; border-radius:50%; background:var(--c); box-shadow:0 0 10px var(--c); }
+  .glass--1{ right:30%; top:22%; --c:#4fb8ff; }
+  .glass--2{ right:6%; top:40%; --c:#b06bff; --b:7s; }
+  .glass--3{ right:24%; bottom:17%; --c:#ff6fb5; --b:5.5s; }
+
+  @media (max-width:760px){
+    .glass{ min-width:0; padding:10px 12px; }
+    .glass span{ display:none; }
+    .glass--1{ right:auto; left:8%; top:16%; }
+    .glass--2{ right:8%; top:24%; }
+    .glass--3{ right:auto; left:40%; top:42%; bottom:auto; }
+  }
+</style>
+</head>
+<body>
+
+<header class="lab-nav">
+  <a class="lab-nav__word" href="index.html">CROSSACTOR</a>
+  <nav class="lab-nav__links" aria-label="ページ内リンク"><a href="#">Services</a><a href="#">3D VR</a><a href="#">Web</a><a href="#">AI</a></nav>
+  <a class="lab-nav__cta" href="#" style="border-radius:999px">無料で相談</a>
+</header>
+
+<section class="stage">
+  <div class="blob blob--1"></div><div class="blob blob--2"></div><div class="blob blob--3"></div><div class="blob blob--4"></div>
+  <canvas id="orb" aria-hidden="true"></canvas>
+  <div class="grain" aria-hidden="true"></div>
+
+  <div class="glass glass--1" data-depth="18" aria-hidden="true"><div class="glass__in"><b><i></i>3D VR</b><span>図面から、歩ける空間へ</span></div></div>
+  <div class="glass glass--2" data-depth="30" aria-hidden="true"><div class="glass__in"><b><i></i>WEB</b><span>触りたくなるサイトを</span></div></div>
+  <div class="glass glass--3" data-depth="12" aria-hidden="true"><div class="glass__in"><b><i></i>AI</b><span>仕事に寄り添う活用を</span></div></div>
+
+  <div class="copy">
+    <p class="eyebrow rise" style="--d:.05s">AI INNOVATION STUDIO</p>
+    <h1 class="title rise" style="--d:.15s">やわらかな未来を、<br><span class="grad">設計する。</span></h1>
+    <p class="lead rise" style="--d:.28s">AIの可能性を、人に寄り添うかたちへ。建築・Web・業務の「こうなったらいい」を、一緒に描きます。</p>
+    <div class="actions rise" style="--d:.4s">
+      <a class="btn btn--solid" href="#">無料で相談する →</a>
+      <a class="btn btn--ghost" href="#">サービスを見る</a>
+    </div>
+  </div>
+</section>
+
+<script src="lab.js"></script>
+<script>
+/* 虹色の液体の球体。輪郭を波で揺らし、カーソルの方向へふくらむ */
+(() => {
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const cv = document.getElementById('orb');
+  const ctx = cv.getContext('2d');
+  const TAU = Math.PI * 2;
+  let W = 0, H = 0, narrow = false;
+  const mouse = { x: 0, y: 0, on: false };
+  let pull = 0;
+
+  function resize () {
+    const dpr = Math.min(devicePixelRatio || 1, 2);
+    W = cv.clientWidth; H = cv.clientHeight; narrow = W < 760;
+    cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+
+  function draw (t) {
+    ctx.clearRect(0, 0, W, H);
+    const cx = narrow ? W * 0.5 : W * 0.7;
+    const cy = narrow ? H * 0.3 : H * 0.5;
+    const R = Math.min(W, H) * (narrow ? 0.22 : 0.25);
+    const phi = Math.atan2(mouse.y - cy, mouse.x - cx);
+    const near = mouse.on ? Math.max(0, 1 - Math.hypot(mouse.x - cx, mouse.y - cy) / (R * 3)) : 0;
+    pull += (near - pull) * 0.08;
+
+    const outline = new Path2D();
+    const N = 150;
+    for (let i = 0; i <= N; i++) {
+      const th = (i / N) * TAU;
+      let r = R * (1 + 0.055 * Math.sin(3 * th + t * 0.0007) + 0.035 * Math.sin(5 * th - t * 0.0011) + 0.02 * Math.sin(8 * th + t * 0.0017));
+      const c = Math.cos(th - phi);
+      if (c > 0) r += R * 0.24 * pull * Math.pow(c, 6);
+      const x = cx + Math.cos(th) * r, y = cy + Math.sin(th) * r;
+      i ? outline.lineTo(x, y) : outline.moveTo(x, y);
+    }
+    outline.closePath();
+
+    // 外側のやわらかい影
+    ctx.save();
+    ctx.shadowColor = 'rgba(120,90,255,.45)'; ctx.shadowBlur = 90;
+    let fill;
+    if (ctx.createConicGradient) {
+      fill = ctx.createConicGradient(t * 0.0003, cx, cy);
+      ['#7af0ff', '#8fb2ff', '#b58cff', '#ff9bd7', '#ffd58a', '#7af0ff'].forEach((c, i, a) => fill.addColorStop(i / (a.length - 1), c));
+    } else {
+      fill = ctx.createLinearGradient(cx - R, cy - R, cx + R, cy + R);
+      fill.addColorStop(0, '#7af0ff'); fill.addColorStop(0.5, '#b58cff'); fill.addColorStop(1, '#ff9bd7');
+    }
+    ctx.fillStyle = fill;
+    ctx.fill(outline);
+    ctx.restore();
+
+    ctx.save();
+    ctx.clip(outline);
+    // 光沢と、下側の陰
+    const hl = ctx.createRadialGradient(cx - R * 0.35, cy - R * 0.45, R * 0.05, cx - R * 0.2, cy - R * 0.3, R * 1.1);
+    hl.addColorStop(0, 'rgba(255,255,255,.9)'); hl.addColorStop(0.35, 'rgba(255,255,255,.2)'); hl.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = hl; ctx.fillRect(cx - R * 2, cy - R * 2, R * 4, R * 4);
+    const sh = ctx.createRadialGradient(cx + R * 0.2, cy + R * 0.3, R * 0.3, cx, cy, R * 1.3);
+    sh.addColorStop(0, 'rgba(40,20,90,0)'); sh.addColorStop(0.75, 'rgba(40,20,90,0)'); sh.addColorStop(1, 'rgba(40,20,90,.32)');
+    ctx.fillStyle = sh; ctx.fillRect(cx - R * 2, cy - R * 2, R * 4, R * 4);
+    // 中を流れる等高線（考えている感じ）
+    for (let k = 0; k < 7; k++) {
+      ctx.beginPath();
+      for (let i = 0; i <= 90; i++) {
+        const th = (i / 90) * TAU;
+        const rr = R * (0.22 + k * 0.11) * (1 + 0.09 * Math.sin(4 * th + t * 0.001 + k));
+        const x = cx + Math.cos(th) * rr + Math.sin(t * 0.0005 + k) * R * 0.06;
+        const y = cy + Math.sin(th) * rr * 0.86;
+        i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+      }
+      ctx.strokeStyle = `rgba(255,255,255,${0.1 + k * 0.025})`;
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    // 軌道の輪と、回る小さな点
+    ctx.save();
+    ctx.translate(cx, cy); ctx.rotate(-0.35);
+    ctx.strokeStyle = 'rgba(70,60,150,.22)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.ellipse(0, 0, R * 1.6, R * 0.44, 0, 0, TAU); ctx.stroke();
+    const a = t * 0.0006;
+    ctx.fillStyle = '#5b5fff'; ctx.shadowColor = '#8b8bff'; ctx.shadowBlur = 12;
+    ctx.beginPath(); ctx.arc(Math.cos(a) * R * 1.6, Math.sin(a) * R * 0.44, 4, 0, TAU); ctx.fill();
+    ctx.restore();
+  }
+
+  const glasses = [...document.querySelectorAll('.glass')];
+  const stage = cv.parentElement;
+  stage.addEventListener('pointermove', e => {
+    const r = cv.getBoundingClientRect();
+    mouse.x = e.clientX - r.left; mouse.y = e.clientY - r.top; mouse.on = true;
+    const nx = mouse.x / W - 0.5, ny = mouse.y / H - 0.5;
+    glasses.forEach(g => {
+      const d = Number(g.dataset.depth);
+      g.style.setProperty('--px', `${(-nx * d).toFixed(1)}px`);
+      g.style.setProperty('--py', `${(-ny * d).toFixed(1)}px`);
+    });
+  });
+  stage.addEventListener('pointerleave', () => { mouse.on = false; });
+  window.addEventListener('resize', resize);
+
+  resize();
+  if (reduce) { draw(0); return; }
+  (function loop (now) { draw(now); requestAnimationFrame(loop); })(performance.now());
+})();
+</script>
+</body>
+</html>

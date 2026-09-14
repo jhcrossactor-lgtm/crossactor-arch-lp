@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>02 AI TERMINAL — CROSSACTOR HERO LAB</title>
+<link rel="stylesheet" href="lab.css">
+<style>
+  :root{ --accent:#5dffb6; --green:#5dffb6; --cyan:#34e7ff; --pink:#ff3dd8; }
+  body{ background:#010403; }
+  .stage{ background:radial-gradient(900px 640px at 72% 50%, rgba(40,255,170,.1), transparent 62%), #010403; }
+  #rain{ position:absolute; inset:0; z-index:1; width:100%; height:100%; }
+  /* 走査線と、上から下へ流れる光の帯 */
+  .stage::before{
+    content:""; position:absolute; inset:0; z-index:3; pointer-events:none;
+    background:repeating-linear-gradient(0deg, rgba(0,0,0,.3) 0 1px, transparent 1px 3px);
+  }
+  .stage::after{
+    content:""; position:absolute; left:0; right:0; top:-24vh; height:24vh; z-index:3; pointer-events:none;
+    background:linear-gradient(180deg, transparent, rgba(93,255,182,.06), transparent);
+    animation:sweep 6s linear infinite;
+  }
+  @keyframes sweep{ to{ transform:translateY(150vh); } }
+
+  .eyebrow{ color:var(--green); }
+  .lab-nav__cta{ color:var(--green); }
+  .title{ font-family:var(--sans); color:#eafff5; }
+  .btn--solid{ box-shadow:0 0 0 1px var(--green), 0 12px 40px -12px rgba(93,255,182,.8); }
+
+  /* グリッチ：普段は静かで、数秒おきに一瞬だけずれる */
+  .glitch{ position:relative; display:inline-block; }
+  .glitch::before, .glitch::after{
+    content:attr(data-text); position:absolute; left:0; top:0; width:100%; height:100%;
+    clip-path:inset(0 0 100% 0);
+  }
+  .glitch::before{ color:var(--pink); animation:g1 5s infinite steps(1); }
+  .glitch::after { color:var(--cyan); animation:g2 5s infinite steps(1); }
+  @keyframes g1{
+    0%, 86%, 100%{ clip-path:inset(0 0 100% 0); transform:none; }
+    87%{ clip-path:inset(8% 0 62% 0); transform:translate(-5px, 0); }
+    89%{ clip-path:inset(56% 0 18% 0); transform:translate(5px, 0); }
+    91%{ clip-path:inset(30% 0 44% 0); transform:translate(-3px, 0); }
+    93%{ clip-path:inset(0 0 100% 0); }
+  }
+  @keyframes g2{
+    0%, 86%, 100%{ clip-path:inset(0 0 100% 0); transform:none; }
+    88%{ clip-path:inset(64% 0 8% 0); transform:translate(5px, 0); }
+    90%{ clip-path:inset(18% 0 58% 0); transform:translate(-5px, 0); }
+    92%{ clip-path:inset(0 0 100% 0); }
+  }
+  .caret::after{ content:"_"; color:var(--green); animation:blink 1s steps(1) infinite; }
+  @keyframes blink{ 50%{ opacity:0; } }
+
+  .term{
+    position:absolute; z-index:5; right:var(--edge); top:50%;
+    width:min(540px, 44vw);
+    transform:translateY(-46%) perspective(1200px) rotateY(var(--ry, -8deg)) rotateX(var(--rx, 2deg));
+    background:rgba(3,16,10,.74); border:1px solid rgba(93,255,182,.32);
+    box-shadow:0 0 0 1px rgba(0,0,0,.6), 0 40px 120px -30px rgba(93,255,182,.35), inset 0 0 60px rgba(93,255,182,.05);
+    backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+    font-family:var(--mono); font-size:13px; color:#c9ffe6;
+    transition:transform .5s var(--ease);
+  }
+  .term__bar{ display:flex; align-items:center; gap:6px; padding:10px 14px; border-bottom:1px solid rgba(93,255,182,.2); font-size:11px; color:rgba(201,255,230,.6); }
+  .term__bar i{ width:9px; height:9px; border-radius:50%; background:rgba(93,255,182,.35); }
+  .term__bar span{ margin-left:8px; }
+  .term__bar em{ margin-left:auto; font-style:normal; color:var(--green); }
+  .term__body{ height:310px; padding:16px 18px; overflow:hidden; line-height:1.95; transition:opacity .45s; }
+  .term__body.is-fade{ opacity:0; }
+  .term__foot{ display:flex; justify-content:space-between; gap:10px; padding:8px 14px; border-top:1px solid rgba(93,255,182,.2); font-size:10.5px; color:rgba(201,255,230,.5); }
+  .ln{ white-space:pre-wrap; word-break:break-all; }
+  .u{ color:var(--cyan); } .dim{ color:rgba(201,255,230,.45); } .ok{ color:var(--green); }
+  .ans{ color:#fff; } .t{ float:right; color:rgba(201,255,230,.4); }
+  .tag{ display:inline-block; margin-left:8px; padding:0 6px; border:1px solid var(--green); color:var(--green); font-size:10px; line-height:1.6; vertical-align:middle; }
+  .term-cap{ position:absolute; z-index:5; right:var(--edge); bottom:84px; margin:0; font-size:11px; color:rgba(201,255,230,.42); }
+
+  @media (max-width:900px){
+    .term{ left:var(--edge); right:var(--edge); width:auto; top:78px; transform:none; }
+    .term__body{ height:176px; font-size:11.5px; line-height:1.8; }
+    .copy .lead{ display:none; }
+    .term-cap{ display:none; }
+  }
+</style>
+</head>
+<body>
+
+<header class="lab-nav">
+  <a class="lab-nav__logo" href="index.html"><img src="../assets/logo-light.png" alt="CROSSACTOR" width="618" height="314"></a>
+  <nav class="lab-nav__links" aria-label="ページ内リンク"><a href="#">Services</a><a href="#">3D VR</a><a href="#">Web</a><a href="#">AI</a></nav>
+  <a class="lab-nav__cta" href="#">無料で相談</a>
+</header>
+
+<section class="stage">
+  <canvas id="rain" aria-hidden="true"></canvas>
+
+  <div class="copy">
+    <p class="eyebrow rise" style="--d:.05s">AI INNOVATION STUDIO</p>
+    <h1 class="title rise" style="--d:.15s"><span class="glitch" data-text="話しかけるように、">話しかけるように、</span><br><span class="caret">つくる。</span></h1>
+    <p class="lead rise" style="--d:.28s">AIと設計の知見で、3D VR・Web・業務の「こうしたい」を、その場でかたちにしていきます。</p>
+    <div class="actions rise" style="--d:.4s">
+      <a class="btn btn--solid" href="#">無料で相談する →</a>
+      <a class="btn btn--ghost" href="#">サービスを見る</a>
+    </div>
+  </div>
+
+  <div class="term" id="term" aria-hidden="true">
+    <div class="term__bar"><i></i><i></i><i></i><span>crossactor — consult</span><em id="t-status">● ONLINE</em></div>
+    <div class="term__body" id="t-body"></div>
+    <div class="term__foot"><span>MODE: CONSULT</span><span id="t-tokens">CHARS 0</span><span>STEP <b id="t-step">1</b>/3</span></div>
+  </div>
+  <p class="term-cap">※ 相談の流れをイメージした演出です</p>
+</section>
+
+<script src="lab.js"></script>
+<script>
+(() => {
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ---------- 背景：立ちのぼる言葉 ---------- */
+  const cv = document.getElementById('rain');
+  const ctx = cv.getContext('2d');
+  const WORDS = ['設計', '推論', '3D', 'VR', 'LP', 'prompt', 'context', 'render', '図面', '構造', '体験', 'vector', 'agent', 'flow', 'UX', 'AI', 'model', '光', '素材', '導線'];
+  let W = 0, H = 0, tokens = [];
+  const mouse = { x: -1e4, y: -1e4 };
+  const rand = (a, b) => a + Math.random() * (b - a);
+
+  function resize () {
+    const dpr = Math.min(devicePixelRatio || 1, 2);
+    W = cv.clientWidth; H = cv.clientHeight;
+    cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const n = Math.round(W / 16);
+    while (tokens.length < n) tokens.push(make(rand(0, H)));
+    tokens.length = n;
+  }
+  function make (y) {
+    const z = Math.random();
+    return { x: rand(0, W), y, z, text: WORDS[(Math.random() * WORDS.length) | 0], sp: 0.15 + z * 0.7, size: 11 + z * 14 };
+  }
+  function drawRain (dt) {
+    ctx.clearRect(0, 0, W, H);
+    ctx.textBaseline = 'middle';
+    for (const t of tokens) {
+      t.y -= t.sp * dt;
+      if (t.y < -30) Object.assign(t, make(H + 30));
+      const d = Math.hypot(t.x - mouse.x, t.y - mouse.y);
+      const near = Math.max(0, 1 - d / 180);
+      ctx.font = `${t.size}px "Space Mono", monospace`;
+      ctx.fillStyle = near > 0
+        ? `rgba(52,231,255,${0.15 + near * 0.8})`
+        : `rgba(93,255,182,${0.05 + t.z * 0.22})`;
+      ctx.fillText(t.text, t.x + (near ? (t.x - mouse.x) * near * 0.15 : 0), t.y);
+    }
+  }
+
+  /* ---------- ターミナル ---------- */
+  const body = document.getElementById('t-body');
+  const chars = document.getElementById('t-tokens');
+  const stepEl = document.getElementById('t-step');
+  const term = document.getElementById('term');
+  const SCRIPTS = [
+    { ask: 'モデルハウスが建つ前に、空間を見せたい', tag: '3D VR',
+      steps: ['平面図を読み取る', '3D空間を組み立てる', 'URLで見られるVRにする'],
+      answer: '図面1枚から、歩ける3D VRをつくりましょう。' },
+    { ask: '問い合わせにつながるサイトにしたい', tag: 'WEB',
+      steps: ['伝えたい魅力を整理する', '動きのある見せ方を設計する', '相談までの流れを設計する'],
+      answer: '見た瞬間に触りたくなる、動くサイトを提案します。' },
+    { ask: '資料づくりの時間を減らしたい', tag: 'AI',
+      steps: ['よく作る資料を洗い出す', 'AIでたたき台を作る流れを組む', '社内で使える形に整える'],
+      answer: 'AIに任せる所と、人が仕上げる所を一緒に決めましょう。' },
+  ];
+  let count = 0;
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const line = (...nodes) => { const d = document.createElement('div'); d.className = 'ln'; d.append(...nodes); body.append(d); return d; };
+  const span = (cls, text) => { const s = document.createElement('span'); s.className = cls; s.textContent = text; return s; };
+
+  async function type (el, text, min = 35, max = 85) {
+    for (const ch of text) {
+      el.textContent += ch;
+      count++; chars.textContent = `CHARS ${count}`;
+      await sleep(reduce ? 0 : rand(min, max));
+    }
+  }
+
+  async function run () {
+    for (let k = 0; ; k = (k + 1) % SCRIPTS.length) {
+      const s = SCRIPTS[k];
+      body.classList.remove('is-fade');
+      body.replaceChildren();
+
+      const ask = span('', '');
+      line(span('u', 'you@studio'), span('dim', ' ~ $ '), ask);
+      await type(ask, s.ask);
+      await sleep(350);
+
+      // 解析中のバー
+      const bar = span('ok', '');
+      const pct = span('dim', '');
+      line(span('dim', 'analyzing '), bar, pct);
+      for (let i = 0; i <= 20; i++) {
+        bar.textContent = '█'.repeat(i) + '░'.repeat(20 - i);
+        pct.textContent = ` ${String(i * 5).padStart(3, ' ')}%`;
+        await sleep(reduce ? 0 : 38);
+      }
+      await sleep(200);
+
+      for (let i = 0; i < s.steps.length; i++) {
+        stepEl.textContent = String(i + 1);
+        line(span('ok', '✓ '), span('', s.steps[i]), span('t', `${rand(0.3, 1.2).toFixed(1)}s`));
+        await sleep(reduce ? 0 : 420);
+      }
+      await sleep(250);
+
+      const ans = span('ans', '');
+      const l = line(span('ok', '→ '), ans);
+      await type(ans, s.answer, 22, 50);
+      l.append(span('tag', s.tag));
+
+      await sleep(2800);
+      body.classList.add('is-fade');
+      await sleep(500);
+    }
+  }
+
+  // ターミナルはカーソルの方へ少し向く
+  const stage = cv.parentElement;
+  stage.addEventListener('pointermove', e => {
+    const r = cv.getBoundingClientRect();
+    mouse.x = e.clientX - r.left; mouse.y = e.clientY - r.top;
+    if (innerWidth > 900) {
+      term.style.setProperty('--ry', `${(-8 + (mouse.x / W - 0.5) * 10).toFixed(2)}deg`);
+      term.style.setProperty('--rx', `${(2 - (mouse.y / H - 0.5) * 6).toFixed(2)}deg`);
+    }
+  });
+  stage.addEventListener('pointerleave', () => { mouse.x = mouse.y = -1e4; });
+  window.addEventListener('resize', resize);
+
+  resize();
+  let last = performance.now();
+  (function loop (now) {
+    const dt = Math.min((now - last) / 16.667, 3); last = now;
+    drawRain(reduce ? 0 : dt);
+    if (!reduce) requestAnimationFrame(loop);
+  })(last);
+  run();
+})();
+</script>
+</body>
+</html>
