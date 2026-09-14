@@ -1,10 +1,14 @@
 /* =========================================================
    PLAN → RENDER（HERO LAB 09）
-   FLOW SCENE の3つ目の場面。上から見た方眼紙に平面図が1本ずつ描かれ、
+   FLOW SCENE の3つ目の場面。方眼紙の背景の上で平面図が1本ずつ描かれ、
    紙が倒れて床になり、壁と家具が立ち上がり、カメラが部屋に入って、
-   最後に実写のパース（制作実例）がスキャンのように現れる。
+   実写のパース（制作実例）がスキャンのように現れる。
+   続けて opts.walk のパースへゆっくり寄りながらクロスフェードでつながり、
+   最後は彩度が落ちて AI の色に寄り、画面全体の点に砕けて AI へ戻る。
 
-   PlanRender.make({ image, walk: [src, …] })  // walk のパースへ続けて歩いて行く → FLOW SCENE の web に渡すオブジェクト
+   PlanRender.make({ image, walk: [src, …] }) → FLOW SCENE の web に渡すオブジェクト
+   ページ側では FlowScene.mount に webRain: 0 を渡し、AI のコードレインと
+   背景がかぶらないようにする（こちらが方眼紙を描く）。
    ========================================================= */
 (function (global) {
   const clamp = (v, a = 0, b = 1) => Math.min(Math.max(v, a), b);
@@ -83,11 +87,34 @@
 
   function make (opts = {}) {
     // 0: 平面図から仕上がるパース、1〜: ウォークスルーで続けて見せるパース
-    const imgs = [opts.image || '../assets/render-living.webp', ...(opts.walk || [])].map(src => { const im = new Image(); im.src = src; return im; });
+    const imgs = [opts.image || '../assets/render-living.webp', ...(opts.walk || [])].map(src => {
+      const im = new Image(); im.src = src;
+      if (im.decode) im.decode().catch(() => {});   // 使う瞬間ではなく、先にデコードしておく
+      return im;
+    });
     const plan = buildPlan();
-    let W = 0, H = 0, narrow = false, startAt = null, cache = null;
+    let W = 0, H = 0, narrow = false, startAt = null, cache = null, gridCache = null;
     const look = { x: 0, y: 0 };
     let cam = CAM.top;
+
+    /* ---------- 画像の下絵。画面サイズに合わせて一度だけ縮小しておき、
+       毎フレームはこのキャンバスから描く（切り替わりのカクつき対策） ---------- */
+    const scaled = imgs.map(() => null);
+    let scaleKey = '';
+    function ensureScaled () {
+      const key = `${W}x${H}`;
+      if (key !== scaleKey) { scaled.fill(null); scaleKey = key; }
+      imgs.forEach((im, i) => {
+        if (scaled[i] || !im.complete || !im.naturalWidth || !W) return;
+        const cover = Math.max(W / im.naturalWidth, H / im.naturalHeight);
+        const k = Math.min(1, cover * 1.3);   // 最大ズームでも足りる大きさ。等倍より大きくはしない
+        const cv = document.createElement('canvas');
+        cv.width = Math.max(2, Math.round(im.naturalWidth * k));
+        cv.height = Math.max(2, Math.round(im.naturalHeight * k));
+        cv.getContext('2d').drawImage(im, 0, 0, cv.width, cv.height);
+        scaled[i] = cv;
+      });
+    }
 
     // 時刻 ms での各工程の進み具合
     const stagesAt = ms => ({
@@ -97,7 +124,6 @@
       fly: easeInOut(clamp((ms - 6400) / 1500)),
       reveal: clamp((ms - 7900) / 1700),
       walk: clamp((ms - WALK_FROM) / (END - WALK_FROM)),
-      out: 0,
     });
 
     function cameraFor (s) {
@@ -132,6 +158,37 @@
       ctx.moveTo(p[0], p[1]); ctx.lineTo(q[0], q[1]);
     };
     const strokeRGBA = (ctx, color, a, w) => { ctx.strokeStyle = `rgba(${color},${a})`; ctx.lineWidth = w; ctx.stroke(); };
+
+    /* ---------- 背景：製図用の方眼紙（AI のコードレインの代わり）。
+       画面いっぱいの細罫＋太罫が、紙が流れるようにゆっくり動く ---------- */
+    function drawBackdrop (ctx, a, t) {
+      if (a <= 0.01) return;
+      ctx.save();
+      ctx.globalAlpha = a;
+      const g = narrow ? 22 : 28, major = g * 5;
+      const off = (t * 0.006) % major;   // ゆっくり左上へ流れる
+      ctx.strokeStyle = `rgba(${CY},0.05)`; ctx.lineWidth = 1;
+      ctx.beginPath();
+      for (let x = -off; x < W + g; x += g) { ctx.moveTo(x, 0); ctx.lineTo(x, H); }
+      for (let y = -off; y < H + g; y += g) { ctx.moveTo(0, y); ctx.lineTo(W, y); }
+      ctx.stroke();
+      ctx.strokeStyle = `rgba(${CY},0.1)`;
+      ctx.beginPath();
+      for (let x = -off; x < W + major; x += major) { ctx.moveTo(x, 0); ctx.lineTo(x, H); }
+      for (let y = -off; y < H + major; y += major) { ctx.moveTo(0, y); ctx.lineTo(W, y); }
+      ctx.stroke();
+      // 太罫の交点に、製図の「＋」印
+      ctx.strokeStyle = `rgba(${IN},0.22)`;
+      ctx.beginPath();
+      for (let x = -off; x < W + major; x += major) {
+        for (let y = -off; y < H + major; y += major) {
+          ctx.moveTo(x - 4, y); ctx.lineTo(x + 4, y);
+          ctx.moveTo(x, y - 4); ctx.lineTo(x, y + 4);
+        }
+      }
+      ctx.stroke();
+      ctx.restore();
+    }
 
     function drawGrid (ctx, a) {
       if (a <= 0.01) return;
@@ -229,14 +286,14 @@
       }
     }
 
-    // ウォークスルーのカット。k は [時刻ms, 注視点x, 注視点y, 拡大率]。前のカットと重なる間はディゾルブ
+    /* ---------- カットのつなぎ。k は [時刻ms, 注視点x, 注視点y, 拡大率]。
+       揺れはなし。各カットはごくゆっくり寄るだけで、クロスフェードでつなぐ。 ---------- */
     const SHOTS = [
-      { img: 0, t0: 0,     room: 'LIVING',       k: [[10400, 0.5, 0.5, 1.06], [13400, 0.74, 0.5, 1.34]] },        // TVの奥、キッチンの方へ向きながら進む
-      { img: 1, t0: 12600, room: 'LIVING → DINING', k: [[12600, 0.2, 0.48, 1.34], [15800, 0.58, 0.45, 1.12], [17600, 0.55, 0.44, 1.46]] },   // 振り向いてカウンターへ歩く
-      { img: 2, t0: 16800, room: 'CAFE COUNTER',  k: [[16800, 0.26, 0.5, 1.42], [20600, 0.56, 0.42, 1.1]] },     // カウンターからリビングの方へ向く
+      { img: 0, t0: 0,     room: 'LIVING',          k: [[9600, 0.5, 0.5, 1.03], [14800, 0.6, 0.48, 1.15]] },     // 仕上がったリビング。TVの方へゆっくり寄る
+      { img: 1, t0: 14000, room: 'LIVING → DINING', k: [[14000, 0.46, 0.5, 1.04], [19600, 0.56, 0.45, 1.16]] },  // ダイニングとカウンターの方へゆっくり寄る
     ];
-    const FADE = 800;
-    const WALK_FROM = 10400, END = 21600;
+    const FADE = 1600;
+    const WALK_FROM = 9600, END = 20000;
 
     function shotView (shot, ms) {
       const k = shot.k;
@@ -250,32 +307,47 @@
       return k[k.length - 1].slice(1);
     }
 
-    function drawCover (ctx, im, fx, fy, zoom) {
-      const s = Math.max(W / im.naturalWidth, H / im.naturalHeight) * zoom;
-      const dw = im.naturalWidth * s, dh = im.naturalHeight * s;
+    function drawCover (ctx, idx, fx, fy, zoom) {
+      const src = scaled[idx] || imgs[idx];
+      const nw = src.width || src.naturalWidth, nh = src.height || src.naturalHeight;
+      const s = Math.max(W / nw, H / nh) * zoom;
+      const dw = nw * s, dh = nh * s;
       const dx = clamp(W / 2 - fx * dw - look.x * 18, W - dw, 0);
       const dy = clamp(H / 2 - fy * dh - look.y * 12, H - dh, 0);
-      ctx.drawImage(im, dx, dy, dw, dh);
+      ctx.drawImage(src, dx, dy, dw, dh);
     }
 
     const currentShot = ms => { let i = 0; SHOTS.forEach((s, j) => { if (ms >= s.t0 + FADE / 2 && (j === 0 || imgs[s.img].naturalWidth)) i = j; }); return i; };
 
-    function drawPhoto (ctx, reveal, ms, t) {
+    // out: AI へ戻る進み具合（0→1）。彩度を落として紺に寄せてから薄くなる
+    function drawPhoto (ctx, reveal, ms, t, alpha, out) {
       if (reveal <= 0 || !imgs[0].complete || !imgs[0].naturalWidth) return;
+      ensureScaled();
+      const photoK = alpha * (1 - smooth(clamp((out - 0.45) / 0.55)));
+      if (photoK <= 0.01) return;
       const edge = W * easeInOut(reveal);
       ctx.save();
       ctx.beginPath(); ctx.rect(0, 0, edge, H); ctx.clip();
+      const canFilter = ctx.filter !== undefined;
+      if (out > 0.01 && canFilter) ctx.filter = `saturate(${Math.round(clamp(1 - out * 1.15) * 100)}%)`;
       SHOTS.forEach((shot, i) => {
         const im = imgs[shot.img];
         if (!im.complete || !im.naturalWidth || ms < shot.t0) return;
         const next = SHOTS[i + 1];
-        if (next && ms > next.t0 + FADE && imgs[next.img].naturalWidth) return;   // 次のカットに入りきったら描かない
-        const a = i === 0 ? 1 : smooth(clamp((ms - shot.t0) / FADE));
+        const nextReady = next && imgs[next.img].complete && imgs[next.img].naturalWidth;
+        if (nextReady && ms > next.t0 + FADE) return;   // 次のカットに入りきったら描かない
+        const fadeIn = i === 0 ? 1 : smooth(clamp((ms - shot.t0) / FADE));
         const [fx, fy, z] = shotView(shot, ms);
-        ctx.globalAlpha = a;
-        drawCover(ctx, im, fx, fy, z);
+        ctx.globalAlpha = photoK * fadeIn;
+        drawCover(ctx, shot.img, fx, fy, z);
       });
-      ctx.globalAlpha = 1;
+      if (canFilter) ctx.filter = 'none';
+      ctx.globalAlpha = photoK;
+      // AI へ戻るとき：AI の場面の紺〜シアンに寄せていく
+      if (out > 0.01) {
+        ctx.fillStyle = `rgba(10,18,46,${0.6 * out})`; ctx.fillRect(0, 0, W, H);
+        ctx.fillStyle = `rgba(${CY},${0.05 * out})`; ctx.fillRect(0, 0, W, H);
+      }
       // 見出しが読めるよう、文字の側（PCは左、スマホは下）を暗くする
       const shade = narrow ? ctx.createLinearGradient(0, H * 0.3, 0, H) : ctx.createLinearGradient(0, 0, W * 0.6, 0);
       shade.addColorStop(0, narrow ? 'rgba(3,4,10,0)' : 'rgba(3,4,10,.78)');
@@ -286,7 +358,7 @@
       const top = ctx.createLinearGradient(0, 0, 0, H * 0.26);
       top.addColorStop(0, 'rgba(3,4,10,.7)'); top.addColorStop(1, 'rgba(3,4,10,0)');
       ctx.fillStyle = top; ctx.fillRect(0, 0, W, H * 0.26);
-      if (reveal >= 1) {
+      if (reveal >= 1 && out < 0.01) {
         const sx = ((t * 0.00012) % 1.6 - 0.3) * W;
         const g = ctx.createLinearGradient(sx - 160, 0, sx + 160, 0);
         g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(0.5, 'rgba(255,240,220,.06)'); g.addColorStop(1, 'rgba(255,255,255,0)');
@@ -296,6 +368,7 @@
       // 走査線
       if (reveal < 1) {
         ctx.save();
+        ctx.globalAlpha = alpha;
         const band = ctx.createLinearGradient(edge - 120, 0, edge, 0);
         band.addColorStop(0, `rgba(${AM},0)`); band.addColorStop(1, `rgba(${AM},.3)`);
         ctx.fillStyle = band; ctx.fillRect(edge - 120, 0, 120, H);
@@ -307,7 +380,7 @@
 
     function drawSteps (ctx, s, a, ms) {
       if (a <= 0.01) return;
-      const names = ['PLAN', 'MODEL', 'CAMERA', 'RENDER', 'WALK'];
+      const names = ['PLAN', 'MODEL', 'CAMERA', 'RENDER', 'VIEWS'];
       const prog = [s.draw, s.rise, s.fly, s.reveal, s.walk];
       if (!narrow) {
         const cx = W * 0.6, y = H * 0.13, gap = 88;
@@ -333,7 +406,7 @@
     }
 
     return {
-      resize (w, h, n) { W = w; H = h; narrow = n; },
+      resize (w, h, n) { W = w; H = h; narrow = n; ensureScaled(); },
       update (dt, t, mouse) {
         const tx = mouse.active ? mouse.x / W - 0.5 : 0, ty = mouse.active ? mouse.y / H - 0.5 : 0;
         look.x += (tx - look.x) * Math.min(1, 0.05 * dt);
@@ -342,23 +415,45 @@
       draw (ctx, t, alpha, build) {
         if (build < 1) startAt = null; else if (startAt === null) startAt = t;
         const ms = startAt === null ? 0 : Math.min(t - startAt, END);
-        const s = startAt === null ? { draw: 0, tilt: 0, rise: 0, fly: 0, reveal: 0, walk: 0, out: 0 } : stagesAt(ms);
+        const s = startAt === null ? { draw: 0, tilt: 0, rise: 0, fly: 0, reveal: 0, walk: 0 } : stagesAt(ms);
         cam = cameraFor(s);
-        const wires = (1 - s.reveal * 0.85) * (1 - s.out);
+        const wires = 1 - s.reveal * 0.85;
+        // 組み上がったまま外側のフェードが始まった＝AI へ戻り始めた
+        const out = build >= 1 && alpha < 0.999 ? clamp(1 - alpha) : 0;
 
         ctx.save();
         ctx.globalAlpha = alpha;
-        drawGrid(ctx, (1 - s.tilt * 0.7) * (1 - s.fly) * clamp(build * 1.4) * (1 - s.out));
+        drawBackdrop(ctx, clamp(build * 1.2) * (1 - s.reveal), t);
+        drawGrid(ctx, (1 - s.tilt * 0.7) * (1 - s.fly) * clamp(build * 1.4));
         if (startAt === null) drawPlan(ctx, 1, clamp(build * 1.2), true);   // 点が集まる先として、完成形をうっすら
         else drawPlan(ctx, s.draw, (1 - s.fly * 0.5) * wires, false);
-        drawLabels(ctx, clamp((s.draw - 0.9) / 0.1) * (1 - s.tilt) * (1 - s.out));
+        drawLabels(ctx, clamp((s.draw - 0.9) / 0.1) * (1 - s.tilt));
         drawModel(ctx, s.rise, wires);
-        drawPhoto(ctx, s.reveal, ms, t);
-        drawSteps(ctx, s, clamp(build * 1.5) * (1 - s.out), ms);
+        drawPhoto(ctx, s.reveal, ms, t, alpha, out);
+        drawSteps(ctx, s, clamp(build * 1.5), ms);
         ctx.restore();
       },
-      // 点が集まる先：平面図の線の上（今のカメラで見た位置）
-      targets (n) {
+      // 点が集まる先／散らばる元
+      targets (n, now) {
+        const ms = startAt === null ? 0 : Math.min((now !== undefined ? now : performance.now()) - startAt, END);
+        // 実写が出てからは画面全体に散らばった点：AIへ戻るとき、写真が点に砕けて見える
+        if (startAt !== null && ms > 8600) {
+          if (!gridCache || gridCache.n !== n || gridCache.w !== W || gridCache.h !== H) {
+            const cols = Math.max(2, Math.ceil(Math.sqrt(n * W / Math.max(1, H))));
+            const rows = Math.max(2, Math.ceil(n / cols));
+            const pts = [];
+            for (let r = 0; r < rows; r++) {
+              for (let c = 0; c < cols && pts.length < n; c++) {
+                pts.push([((c + 0.5) / cols + (Math.random() - 0.5) * 0.8 / cols) * W,
+                          ((r + 0.5) / rows + (Math.random() - 0.5) * 0.8 / rows) * H]);
+              }
+            }
+            while (pts.length < n) pts.push([Math.random() * W, Math.random() * H]);
+            gridCache = { n, w: W, h: H, pts };
+          }
+          return gridCache.pts;
+        }
+        // それまでは平面図の線の上（今のカメラで見た位置）
         if (!cache || cache.n !== n) {
           const pts = [];
           for (let i = 0; i < n; i++) {

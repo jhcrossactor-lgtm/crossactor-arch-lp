@@ -241,6 +241,8 @@
     const host = opts.pointerTarget || fg;
     // 場面の長さ（ms）。opts.durations で上書きできる
     const PH = Object.assign({ drift: 2200, cluster: 6500, toCity: 2600, city: 8500, toWeb: 2800, web: 10000, toAI: 2000 }, opts.durations);
+    // Webの場面で残すコードレインの濃さ。opts.webRain: 0 で消せる（09 は方眼紙を自前で描く）
+    const WEB_RAIN = opts.webRain !== undefined ? opts.webRain : 0.35;
 
     let web = opts.web || null;
     let W = 0, H = 0, narrow = false, N = 0;
@@ -352,14 +354,14 @@
       } else if (phase === 'city') {
         rainK = 0; cityAlpha = 1; cityRise = 1; webAlpha = 0; swarmAlpha = 0;
       } else if (phase === 'toWeb') {
-        rainK = lerp(lv0.rainK, 0.35, smooth(u));
+        rainK = lerp(lv0.rainK, WEB_RAIN, smooth(u));
         cityAlpha = lerp(lv0.cityAlpha, 0, smooth(clamp(u * 1.4)));
         cityRise = lerp(lv0.cityRise, 0, easeOut(clamp(u * 1.2)));
         webAlpha = smooth(clamp((u - 0.3) / 0.7));
         webBuild = easeOut(clamp((u - 0.35) / 0.65));
         swarmAlpha = swarmIn * (1 - smooth(clamp((u - 0.6) / 0.4)));
       } else if (phase === 'web') {
-        rainK = toward(rainK, 0.35, 0.05); cityAlpha = 0; webAlpha = 1; webBuild = 1; swarmAlpha = 0;
+        rainK = toward(rainK, WEB_RAIN, 0.05); cityAlpha = 0; webAlpha = 1; webBuild = 1; swarmAlpha = 0;
       } else {
         rainK = lerp(lv0.rainK, 1, smooth(u));
         cityAlpha = lerp(lv0.cityAlpha, 0, smooth(clamp(u * 1.4)));

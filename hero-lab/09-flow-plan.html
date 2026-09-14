@@ -150,8 +150,9 @@
     canvas: document.getElementById('c'),
     rainCanvas: document.getElementById('rain'),
     pointerTarget: document.querySelector('.stage'),
-    web: PlanRender.make({ image: '../assets/render-living.webp', walk: ['../assets/walk-living2.webp', '../assets/walk-cafe.webp'] }),
-    durations: { toWeb: 2600, web: 23000 },
+    web: PlanRender.make({ image: '../assets/render-living.webp', walk: ['../assets/walk-living2.webp'] }),
+    durations: { toWeb: 2600, web: 21200 },
+    webRain: 0,   // PLAN の背景は方眼紙（plan-render 側で描く）。AI のコードレインは消す
     stateNames: { toWeb: 'DRAFTING', web: 'PLAN → RENDER' },
     onScene,
     onStats: s => {
