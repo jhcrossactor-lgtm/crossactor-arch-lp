@@ -8,6 +8,7 @@ const LAB_PATTERNS = [
   { file: '06-neural-morph.html', name: 'NEURAL MORPH' },
   { file: '07-flow.html', name: 'FLOW : AI → CITY' },
   { file: '08-flow-web.html', name: 'FLOW + WEB' },
+  { file: '09-flow-plan.html', name: 'FLOW + PLAN' },
 ];
 
 (function () {

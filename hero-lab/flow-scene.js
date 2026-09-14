@@ -239,7 +239,8 @@
     const rain = codeRain(opts.rainCanvas);
     const city = cityScene();
     const host = opts.pointerTarget || fg;
-    const PH = { drift: 2200, cluster: 6500, toCity: 2600, city: 8500, toWeb: 2800, web: 10000, toAI: 2000 };
+    // 場面の長さ（ms）。opts.durations で上書きできる
+    const PH = Object.assign({ drift: 2200, cluster: 6500, toCity: 2600, city: 8500, toWeb: 2800, web: 10000, toAI: 2000 }, opts.durations);
 
     let web = opts.web || null;
     let W = 0, H = 0, narrow = false, N = 0;
@@ -523,7 +524,8 @@
     function stats (now) {
       if (!opts.onStats || now - statsAt < 250) return;
       statsAt = now;
-      const state = { drift: 'LEARNING', cluster: 'THINKING', toCity: 'CONSTRUCTING', city: 'CITY', toWeb: 'COMPOSING', web: 'WEB', toAI: 'DISSOLVING' }[phase];
+      // HUD の状態名。opts.stateNames で上書きできる
+      const state = Object.assign({ drift: 'LEARNING', cluster: 'THINKING', toCity: 'CONSTRUCTING', city: 'CITY', toWeb: 'COMPOSING', web: 'WEB', toAI: 'DISSOLVING' }, opts.stateNames)[phase];
       opts.onStats({ nodes: N, links: linkCount, state });
     }
 
