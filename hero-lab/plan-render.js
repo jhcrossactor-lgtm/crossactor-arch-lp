@@ -352,7 +352,7 @@
           if (g > 72) {   // 木目や小さな模様は拾わず、家具や建具の輪郭を中心に
             out.data[i * 4] = 110; out.data[i * 4 + 1] = 231; out.data[i * 4 + 2] = 255;
             out.data[i * 4 + 3] = Math.min(225, (g - 72) * 1.7);
-            if (g > 120 && (x * 7 + y * 13) % 5 === 0) pts.push([x / w, y / h]);   // 点分解の候補（線の上）
+            if (g > 120 && (x * 7 + y * 13) % 3 === 0) pts.push([x / w, y / h]);   // 点分解の候補（線の上）
           }
         }
       }
@@ -362,31 +362,72 @@
       edge = { cv: src, w, h, pts, tiles: null };
     }
 
-    // 縁取りの線：浮き出たあと、タイル状に砕けて飛散する
+    // 縁取りの線：浮き出たあと、細かい破片と点・短い線に分解されて飛散する
     function drawEdges (ctx, out) {
       if (!edge || out <= 0.01) return;
       const appear = smooth(clamp(out / 0.32));
       const dissolve = smooth(clamp((out - 0.42) / 0.52));
-      const cols = 22, rows = 14;
       if (!edge.tiles) {
+        // 約15px角の細片
+        edge.tc = Math.max(24, Math.round(W / 15));
+        edge.tr = Math.max(16, Math.round(H / 15));
         edge.tiles = [];
-        for (let i = 0; i < cols * rows; i++) {
+        for (let i = 0; i < edge.tc * edge.tr; i++) {
           const a = Math.random() * Math.PI * 2;
-          edge.tiles.push({ r: Math.random() * 0.85, dx: Math.cos(a), dy: Math.sin(a) - 0.7 });
+          edge.tiles.push({ r: Math.random() * 0.8, dx: Math.cos(a), dy: Math.sin(a) - 0.8 });
+        }
+        // 線の上から剥がれる、細かい点と短い線
+        edge.frag = [];
+        const n = Math.min(1100, edge.pts.length);
+        for (let i = 0; i < n; i++) {
+          const q = edge.pts[(Math.random() * edge.pts.length) | 0];
+          const a = Math.random() * Math.PI * 2;
+          edge.frag.push({
+            x: q[0], y: q[1], r: Math.random() * 0.75,
+            vx: Math.cos(a) * (30 + Math.random() * 90), vy: Math.sin(a) * (30 + Math.random() * 90) - 50,
+            seg: Math.random() < 0.3, ang: Math.random() * Math.PI * 2, len: 4 + Math.random() * 10,
+          });
         }
       }
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
-      const tw = edge.w / cols, th = edge.h / rows, dw = W / cols, dh = H / rows;
-      for (let r = 0; r < rows; r++) {
-        for (let c = 0; c < cols; c++) {
-          const tile = edge.tiles[r * cols + c];
-          const k = dissolve <= tile.r ? 0 : (dissolve - tile.r) / (1 - tile.r + 1e-4);
+      if (dissolve <= 0.001) {
+        // まだ砕けていない間は、線の層をそのまま重ねる
+        ctx.globalAlpha = appear * 0.95;
+        ctx.drawImage(edge.cv, -look.x * 18, -look.y * 12, W, H);
+      } else {
+        const tc = edge.tc, tr = edge.tr;
+        const tw = edge.w / tc, th = edge.h / tr, dw = W / tc, dh = H / tr;
+        for (let r = 0; r < tr; r++) {
+          for (let c = 0; c < tc; c++) {
+            const tile = edge.tiles[r * tc + c];
+            const k = dissolve <= tile.r ? 0 : (dissolve - tile.r) / (1 - tile.r + 1e-4);
+            const a = appear * (1 - k) * (1 - k);   // 破片は早めに薄く。あとは点と線が引き継ぐ
+            if (a <= 0.02) continue;
+            ctx.globalAlpha = a * 0.95;
+            ctx.drawImage(edge.cv, c * tw, r * th, tw, th,
+              c * dw + tile.dx * k * 46 - look.x * 18, r * dh + tile.dy * k * 46 - look.y * 12, dw, dh);
+          }
+        }
+        // 剥がれた点と短い線
+        ctx.strokeStyle = `rgba(${CY},0.8)`; ctx.lineWidth = 1;
+        ctx.fillStyle = `rgba(${CY},0.9)`;
+        for (const f of edge.frag) {
+          if (dissolve <= f.r) continue;
+          const k = (dissolve - f.r) / (1 - f.r + 1e-4);
           const a = appear * (1 - k);
           if (a <= 0.02) continue;
-          ctx.globalAlpha = a * 0.95;
-          ctx.drawImage(edge.cv, c * tw, r * th, tw, th,
-            c * dw + tile.dx * k * 70 - look.x * 18, r * dh + tile.dy * k * 70 - look.y * 12, dw, dh);
+          const x = f.x * W + f.vx * k - look.x * 18, y = f.y * H + f.vy * k - look.y * 12;
+          ctx.globalAlpha = a;
+          if (f.seg) {
+            const l = f.len * (1 - k * 0.6);
+            ctx.beginPath();
+            ctx.moveTo(x - Math.cos(f.ang) * l, y - Math.sin(f.ang) * l);
+            ctx.lineTo(x + Math.cos(f.ang) * l, y + Math.sin(f.ang) * l);
+            ctx.stroke();
+          } else {
+            ctx.fillRect(x - 0.8, y - 0.8, 1.6, 1.6);
+          }
         }
       }
       ctx.restore();
