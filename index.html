@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CROSSACTOR — 設計意図を、体験に変える。</title>
+<meta name="description" content="図面を読み、骨組みを組み、光と素材を置く。設計者の視点で、まだ建っていない住まいを歩ける3D VR空間にします。">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="nav">
+  <a class="nav__logo" href="#top"><img src="assets/logo-light.png" alt="CROSSACTOR AI INNOVATION STUDIO" width="618" height="314"></a>
+  <nav class="nav__links" aria-label="ページ内リンク">
+    <a href="#top">Sequence</a>
+    <a href="#usecase">Use cases</a>
+    <a href="#compare">Before / After</a>
+    <a href="#process">Process</a>
+    <a href="#profile">Profile</a>
+  </nav>
+  <a class="btn btn--line nav__cta" href="#contact">相談する</a>
+</header>
+
+<main>
+
+<!-- ============ SEQUENCE ============
+     縦に長いセクションの中身を sticky で固定し、スクロール量で
+     図面 → 構造 → 完成 → 体験 の順に建物が立ち上がっていく -->
+<section class="seq" id="top">
+  <div class="seq__stage">
+    <div class="grid" aria-hidden="true"></div>
+
+    <div class="seq__copy">
+      <p class="label"><span class="label__dot"></span>3D VR ARCHITECTURAL VISUALIZATION</p>
+      <h1 class="seq__title">設計意図を、<br><span class="hl">体験</span>に変える。</h1>
+      <p class="seq__lead">
+        図面を読み、骨組みを組み、光と素材を置く。<br>
+        設計者の視点で、まだ建っていない住まいを「歩ける現実」にします。
+      </p>
+
+      <ol class="phases" aria-label="制作の段階">
+        <li class="phase" data-phase="0"><span class="phase__no">01</span><span class="phase__en">PLAN</span><span class="phase__ja">図面を読み取る</span></li>
+        <li class="phase" data-phase="1"><span class="phase__no">02</span><span class="phase__en">STRUCTURE</span><span class="phase__ja">骨組みを組み立てる</span></li>
+        <li class="phase" data-phase="2"><span class="phase__no">03</span><span class="phase__en">FINISH</span><span class="phase__ja">素材と光を置く</span></li>
+        <li class="phase" data-phase="3"><span class="phase__no">04</span><span class="phase__en">EXPERIENCE</span><span class="phase__ja">歩ける空間にする</span></li>
+      </ol>
+
+      <div class="seq__actions">
+        <a class="btn btn--primary" href="#contact">無料で相談する</a>
+        <a class="btn btn--line" href="#compare">制作事例を見る</a>
+      </div>
+    </div>
+
+    <div class="seq__view">
+      <div class="frame" aria-hidden="true">
+        <img class="layer layer--plan" src="assets/plan-lines.webp" alt="">
+        <img class="layer layer--structure" src="assets/structure.webp" alt="">
+        <svg class="layer layer--draw" id="drawing" viewBox="0 0 800 560" preserveAspectRatio="xMidYMid meet">
+          <g id="g-plan"></g>
+          <g id="g-struct"></g>
+        </svg>
+        <img class="layer layer--finish" src="assets/render-living.webp" alt="">
+
+        <div class="vr">
+          <span class="vr__c vr__c--tl"></span><span class="vr__c vr__c--tr"></span>
+          <span class="vr__c vr__c--bl"></span><span class="vr__c vr__c--br"></span>
+          <span class="vr__cross"></span>
+          <span class="vr__read">VR VIEW ／ MOVE TO LOOK</span>
+        </div>
+
+        <div class="hud">
+          <span class="hud__no">01 / 04</span>
+          <span class="hud__name">PLAN</span>
+          <span class="hud__bar"><i></i></span>
+        </div>
+      </div>
+      <p class="view__caption">01–02 はイメージ（構造写真はフリー素材）／ 03–04 は制作実例（リビング）</p>
+    </div>
+
+    <div class="scrollcue" aria-hidden="true">SCROLL TO BUILD<span></span></div>
+  </div>
+</section>
+
+<!-- ============ USE CASES ============ -->
+<section class="section" id="usecase">
+  <div class="wrap">
+    <p class="label reveal"><span class="label__dot"></span>01 — USE CASES</p>
+    <h2 class="h2 reveal">こんな場面で使えます</h2>
+    <p class="lead reveal">建物が建つ前でも、今の住まいのままでも。図面や写真から、見る人が自分で歩き回れる空間をつくります。</p>
+
+    <div class="cards">
+      <article class="card reveal">
+        <span class="card__no">01</span>
+        <svg class="card__icon" viewBox="0 0 56 56" aria-hidden="true"><path d="M8 28 28 10l20 18"/><path d="M13 24v22h30V24"/><path d="M24 46V34h8v12"/></svg>
+        <h3>モデルハウス完成前に</h3>
+        <p>建物が建つ前でも、VRがあればモデルハウス代わりに活用できます。</p>
+        <span class="tag">新築・先行販売</span>
+      </article>
+      <article class="card reveal" data-delay="90">
+        <span class="card__no">02</span>
+        <svg class="card__icon" viewBox="0 0 56 56" aria-hidden="true"><rect x="8" y="10" width="40" height="26"/><path d="M28 36v10M18 46h20"/><path d="M14 30l8-8 6 5 10-11"/></svg>
+        <h3>設計プレゼンに</h3>
+        <p>図面だけでは伝わらない空間の広がりを、実体験として届けます。</p>
+        <span class="tag">コンペ・提案</span>
+      </article>
+      <article class="card reveal" data-delay="180">
+        <span class="card__no">03</span>
+        <svg class="card__icon" viewBox="0 0 56 56" aria-hidden="true"><rect x="5" y="14" width="19" height="28"/><rect x="32" y="14" width="19" height="28"/><path d="M20 28h16M31 23l5 5-5 5"/></svg>
+        <h3>リフォームの提案に</h3>
+        <p>現状のお住まいからVR化。ビフォーアフターを体感で伝えます。</p>
+        <span class="tag">Before / After</span>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ============ BEFORE / AFTER ============ -->
+<section class="section" id="compare">
+  <div class="wrap">
+    <p class="label reveal"><span class="label__dot"></span>02 — BEFORE / AFTER</p>
+    <h2 class="h2 reveal">今の住まいが、そのまま提案になる。</h2>
+    <p class="lead reveal">現地を360度撮影し、家具や小物をAIで取り除いてから、新しい暮らしを重ねます。つまみを動かして比べ、画像をドラッグして部屋を見回してください。</p>
+
+    <div class="cmp-tabs reveal" role="tablist" aria-label="比較する組み合わせ">
+      <button class="cmp-tab" role="tab" aria-selected="true"
+        data-a="assets/room-before.webp" data-b="assets/room-cleared.webp"
+        data-la="BEFORE｜現状" data-lb="AFTER｜家具をAIで削除">現状 → 家具を削除</button>
+      <button class="cmp-tab" role="tab" aria-selected="false"
+        data-a="assets/room-cleared.webp" data-b="assets/room-styled.webp"
+        data-la="BEFORE｜家具を削除" data-lb="AFTER｜スタイリング">家具を削除 → スタイリング</button>
+    </div>
+
+    <div class="cmp reveal" id="cmp">
+      <div class="cmp__img cmp__img--a"></div>
+      <div class="cmp__img cmp__img--b"></div>
+      <span class="cmp__line"></span>
+      <button class="cmp__handle" type="button" role="slider" aria-label="比較の位置" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50">‹ ›</button>
+      <span class="cmp__tag cmp__tag--a">BEFORE｜現状</span>
+      <span class="cmp__tag cmp__tag--b">AFTER｜家具をAIで削除</span>
+      <p class="cmp__hint">つまみで比較 ／ 画像をドラッグで360°見回す</p>
+    </div>
+    <p class="cmp-note">制作実例（360度写真から制作）。</p>
+  </div>
+</section>
+
+<!-- ============ PROCESS ============ -->
+<section class="section" id="process">
+  <div class="wrap">
+    <p class="label reveal"><span class="label__dot"></span>03 — PROCESS</p>
+    <h2 class="h2 reveal">制作の流れ</h2>
+    <p class="lead reveal">図面から一から組み立てる方法と、今ある部屋の写真から仕立てる方法。どちらも、URLひとつで内覧できるVRに仕上げます。</p>
+
+    <div class="tracks">
+      <div class="track reveal">
+        <h3><small>PATTERN A</small>図面から制作</h3>
+        <ol class="steps">
+          <li class="step"><span class="step__no">STEP 01</span><h4>平面図を読み取る</h4><p>設計意図や細かな動線を正確に把握します。</p></li>
+          <li class="step"><span class="step__no">STEP 02</span><h4>3Dモデリング</h4><p>照明や素材感を精密に設定し、3D空間を構築します。</p></li>
+          <li class="step"><span class="step__no">STEP 03</span><h4>3DVR完成</h4><p>URL一つでどこからでも内覧できるVRをお届けします。</p></li>
+        </ol>
+      </div>
+      <div class="track reveal" data-delay="120">
+        <h3><small>PATTERN B</small>写真から制作</h3>
+        <ol class="steps">
+          <li class="step"><span class="step__no">STEP 01</span><h4>360度撮影</h4><p>現地の空気をデジタルデータ化します。</p></li>
+          <li class="step"><span class="step__no">STEP 02</span><h4>家具・小物をAIで削除</h4><p>不要物を除去し、素の空間を作ります。</p></li>
+          <li class="step"><span class="step__no">STEP 03</span><h4>3DVR完成</h4><p>納得感のあるリフォーム提案を実現します。</p></li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ PROFILE ============ -->
+<section class="section" id="profile">
+  <div class="wrap">
+    <p class="label reveal"><span class="label__dot"></span>04 — WHY / PROFILE</p>
+    <h2 class="h2 reveal">描くのは、建つことを<wbr>知っている人。</h2>
+    <p class="profile__text reveal">
+      設計、企画、営業、現場監督。建築の現場を一通り動かしてきた視点で図面を読み解き、
+      きれいな絵で終わらせず、施工まで見据えた「現実に建つ」解像度で空間を組み立てます。
+      ホームインスペクターや整理収納アドバイザーとしての視点も、提案の説得力に変えます。
+    </p>
+
+    <div class="why">
+      <div class="why__item reveal"><span class="why__no">01</span><h3>設計経験に裏打ちされた再現性</h3><p>設計者として培った読図力が、仕上がりの精度を支えます。</p></div>
+      <div class="why__item reveal" data-delay="90"><span class="why__no">02</span><h3>今の住まいからでもVR化</h3><p>一からの制作はもちろん、既存写真からのVR化も可能です。</p></div>
+      <div class="why__item reveal" data-delay="180"><span class="why__no">03</span><h3>スマホとURLだけで共有</h3><p>特別なアプリは不要。URLひとつで高品質なVR体験を届けます。</p></div>
+    </div>
+
+    <ul class="skills reveal" aria-label="スキルと資格">
+      <li>建築設計</li><li>ホームインスペクター</li><li>整理収納アドバイザー</li><li>色彩福祉</li>
+      <li>3DCAD</li><li>3DVRレンダリング</li><li>Photoshop・Illustrator</li><li>動画制作</li><li>生成AIパスポート</li>
+    </ul>
+  </div>
+</section>
+
+<!-- ============ CTA ============ -->
+<section class="cta" id="contact">
+  <div class="wrap cta__inner">
+    <p class="label label--center reveal"><span class="label__dot"></span>CONTACT</p>
+    <h2 class="cta__title reveal">図面が1枚あれば、始められます。</h2>
+    <p class="cta__lead reveal">平面図でも、今のお部屋の写真でも。まずは何を伝えたいかから、一緒に整理しましょう。</p>
+    <a class="btn btn--primary btn--lg reveal" href="#contact">相談する</a>
+    <p class="cta__note">※ このページは検証用の下書きです。お問い合わせ先は仮のリンクです。</p>
+  </div>
+</section>
+
+</main>
+
+<footer class="foot">
+  <div class="wrap foot__inner">
+    <img class="foot__logo" src="assets/logo-light.png" alt="CROSSACTOR" width="618" height="314">
+    <ul class="credits">
+      <li>構造写真：<a href="https://commons.wikimedia.org/wiki/File:25_Wood_frame_condominium_construction_in_Canada_-_apartment_building_construction_in_Fernie,_British_Columbia.jpg" rel="noopener">25 Wood frame condominium construction in Canada - apartment building construction in Fernie, British Columbia</a> — Marek Ślusarczyk (Tupungato) Photo portfolio（<a href="https://creativecommons.org/licenses/by/3.0" rel="noopener license">CC BY 3.0</a>、リサイズ・トリミングして使用）</li>
+      <li>図面・360度写真・完成パース：CROSSACTOR 制作実例</li>
+    </ul>
+    <p class="foot__copy">© CROSSACTOR</p>
+  </div>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>

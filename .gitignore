@@ -1,0 +1,7 @@
+# 元画像（tools で再取得・再生成できる）
+assets/_raw/
+
+__pycache__/
+*.pyc
+.DS_Store
+Thumbs.db
