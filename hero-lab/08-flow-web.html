@@ -135,6 +135,7 @@
       <button type="button" class="variant" data-v="c" title="MULTI SCREEN">C</button>
       <button type="button" class="variant" data-v="d" title="CODE → PAGE">D</button>
       <button type="button" class="variant" data-v="e" title="CURSOR BUILD">E</button>
+      <button type="button" class="variant" data-v="f" title="LAYER SPACE">F</button>
       <span class="variants__name" id="v-name"></span>
     </div>
   </div>
@@ -161,7 +162,7 @@
     web: 'MOVE TO TILT ／ HOVER TO INSPECT',
   };
 
-  let v = WebVariants[params.get('v')] ? params.get('v') : 'a';
+  let v = WebVariants[params.get('v')] ? params.get('v') : 'f';
   const markVariant = () => {
     variantBtns.forEach(b => { const on = b.dataset.v === v; b.classList.toggle('is-active', on); b.setAttribute('aria-pressed', String(on)); });
     vName.textContent = WebVariants[v].name;

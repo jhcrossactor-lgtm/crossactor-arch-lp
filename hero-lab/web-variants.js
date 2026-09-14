@@ -713,11 +713,210 @@
     };
   }
 
+  /* =========================================================
+     F. LAYER SPACE：画面いっぱいに、何層にも重なった画面の中を進む
+     C を CITY と同じ大きさにしたもの。一定の奥行きごとに「層」の枠があり、
+     その間に幅の違う画面（PC・タブレット・スマホ・コード・グラフ…）が浮かぶ
+     ========================================================= */
+  function layerSpace () {
+    const rand = (a, b) => a + Math.random() * (b - a);
+    const FAR = 72, LAYER = 12;
+    const cam = { x: 0, y: 0, z: 0 };
+    let W = 0, H = 0, narrow = false, boost = 0, hover = null, lastBuild = 0;
+    const KINDS = ['desktop', 'desktop', 'tablet', 'phone', 'phone', 'code', 'chart', 'image', 'form'];
+    const SIZES = {
+      desktop: [4.2, 2.6, '1440px'], tablet: [2.2, 2.8, '768px'], phone: [1.1, 2.2, '375px'],
+      code: [3.0, 1.9, '</>'], chart: [2.6, 1.7, 'DATA'], image: [2.4, 1.6, 'IMAGE'], form: [2.0, 2.2, 'FORM'],
+    };
+    let uid = 0;
+    const spawn = z => {
+      const kind = KINDS[(Math.random() * KINDS.length) | 0];
+      const [w, h, label] = SIZES[kind];
+      const s = 0.8 + Math.random() * 0.5;
+      return { id: uid++, kind, label, x: rand(-15, 15), y: rand(-7.5, 7.5), z, w: w * s, h: h * s, seed: Math.random() * 100, hue: [CY, PK, IN][(Math.random() * 3) | 0] };
+    };
+    const wins = Array.from({ length: 56 }, () => spawn(rand(3, FAR)));
+
+    const centerX = () => W * (narrow ? 0.5 : 0.6);
+    const proj = (x, y, z) => {
+      const dz = z - cam.z;
+      if (dz < 0.6) return null;
+      const f = (Math.min(W, H) * 1.05) / dz;
+      return [centerX() + (x - cam.x) * f, H / 2 + (y - cam.y) * f, f, dz];
+    };
+    const rectOf = win => {
+      const c = proj(win.x, win.y, win.z);
+      if (!c) return null;
+      const w = win.w * c[2], h = win.h * c[2];
+      return { x: c[0] - w / 2, y: c[1] - h / 2, w, h, dz: c[3] };
+    };
+    // 遠いほど薄く、目の前まで来たら消える（大きな画面で文字が隠れないように）
+    const fogOf = dz => clamp(1 - dz / FAR) * clamp((dz - 1.2) / 3);
+
+    function content (ctx, w, r, t) {
+      const lw = Math.max(1, r.w * 0.012), p = r.w * 0.06, top = r.y + r.h * 0.14, iw = r.w - p * 2;
+      const line = (x1, y1, x2, y2, col, a, width) => { ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); stroke(ctx, col, a, width); };
+      // タイトルバー
+      line(r.x, r.y + r.h * 0.1, r.x + r.w, r.y + r.h * 0.1, IN, 0.4, 1);
+      [PK, IN, CY].forEach((col, k) => { ctx.fillStyle = `rgba(${col},.9)`; ctx.fillRect(r.x + p * 0.6 + k * p * 0.5, r.y + r.h * 0.05 - 1.5, 3, 3); });
+
+      if (w.kind === 'desktop' || w.kind === 'tablet') {
+        const cols = w.kind === 'desktop' ? 3 : 2;
+        roundRect(ctx, r.x + p, top, iw, r.h * 0.3, 3); fill(ctx, PK, 0.12);
+        line(r.x + p * 1.6, top + r.h * 0.1, r.x + p * 1.6 + iw * 0.5, top + r.h * 0.1, WH, 0.85, lw * 1.6);
+        line(r.x + p * 1.6, top + r.h * 0.19, r.x + p * 1.6 + iw * 0.34, top + r.h * 0.19, IN, 0.6, lw);
+        const gap = iw * 0.03, cw = (iw - gap * (cols - 1)) / cols, ch = r.h * 0.2;
+        for (let row = 0; row < 2; row++) for (let q = 0; q < cols; q++) {
+          const cy = top + r.h * 0.34 + row * (ch + gap);
+          if (cy + ch > r.y + r.h - p * 0.5) continue;
+          roundRect(ctx, r.x + p + q * (cw + gap), cy, cw, ch, 3); fill(ctx, CY, 0.08); stroke(ctx, CY, 0.55, 1);
+        }
+      } else if (w.kind === 'phone') {
+        for (let k = 0; k < 4; k++) { ctx.beginPath(); ctx.arc(r.x + p + (k + 0.5) * (iw / 4), top + r.h * 0.05, r.w * 0.07, 0, TAU); stroke(ctx, k % 2 ? PK : CY, 0.8, 1); }
+        for (let k = 0; k < 2; k++) {
+          const cy = top + r.h * (0.13 + k * 0.33);
+          roundRect(ctx, r.x + p, cy, iw, r.h * 0.28, 3); fill(ctx, [CY, PK][k], 0.12); stroke(ctx, CY, 0.5, 1);
+          line(r.x + p * 1.8, cy + r.h * 0.22, r.x + p + iw * 0.6, cy + r.h * 0.22, WH, 0.7, lw);
+        }
+      } else if (w.kind === 'code') {
+        const n = 7, sc = ((t * 0.00025) + w.seed) % 1;
+        for (let k = 0; k < n; k++) {
+          const yy = top + ((k / n + 1 - sc) % 1) * (r.h * 0.8);
+          const len = 0.25 + (((k + Math.floor(w.seed)) * 37) % 10) / 16;
+          line(r.x + p + (k % 3) * p * 0.8, yy, r.x + p + Math.min(iw, len * iw), yy, [CY, PK, IN, WH][k % 4], 0.7, lw);
+        }
+      } else if (w.kind === 'chart') {
+        const bars = 7, bw = iw / (bars * 1.6);
+        for (let k = 0; k < bars; k++) {
+          const hk = r.h * (0.18 + 0.42 * (0.5 + 0.5 * Math.sin(t * 0.0012 + k * 0.9 + w.seed)));
+          ctx.fillStyle = `rgba(${k % 3 === 0 ? PK : CY},.55)`;
+          ctx.fillRect(r.x + p + k * bw * 1.6, r.y + r.h - p * 0.6 - hk, bw, hk);
+        }
+        ctx.beginPath();
+        for (let k = 0; k <= 10; k++) {
+          const xx = r.x + p + (iw * k) / 10, yy = top + r.h * (0.25 + 0.18 * Math.sin(k * 0.8 + t * 0.001 + w.seed));
+          if (k) ctx.lineTo(xx, yy); else ctx.moveTo(xx, yy);
+        }
+        stroke(ctx, WH, 0.75, lw);
+      } else if (w.kind === 'image') {
+        const g = ctx.createLinearGradient(r.x, top, r.x + r.w, r.y + r.h);
+        g.addColorStop(0, `rgba(${PK},.28)`); g.addColorStop(1, `rgba(${CY},.14)`);
+        roundRect(ctx, r.x + p, top, iw, r.h * 0.76, 3); ctx.fillStyle = g; ctx.fill();
+        line(r.x + p, top, r.x + p + iw, top + r.h * 0.76, WH, 0.25, 1);
+        line(r.x + p + iw, top, r.x + p, top + r.h * 0.76, WH, 0.25, 1);
+        const sx = r.x + p + ((((t * 0.0004) + w.seed) % 1.4) / 1.4) * iw;
+        line(sx, top, sx, top + r.h * 0.76, WH, 0.45, lw * 1.4);
+      } else if (w.kind === 'form') {
+        for (let k = 0; k < 3; k++) { roundRect(ctx, r.x + p, top + r.h * (0.06 + k * 0.2), iw, r.h * 0.12, 3); stroke(ctx, IN, 0.6, 1); }
+        roundRect(ctx, r.x + p, top + r.h * 0.66, iw * 0.55, r.h * 0.12, r.h * 0.06); fill(ctx, CY, 0.85);
+      }
+    }
+
+    return {
+      resize (w, h, n) { W = w; H = h; narrow = n; },
+      update (dt, t, mouse) {
+        const nx = mouse.active ? mouse.x / W - 0.5 : Math.sin(t * 0.0003) * 0.2;
+        const ny = mouse.active ? mouse.y / H - 0.5 : Math.cos(t * 0.00025) * 0.15;
+        cam.x += (nx * 5 - cam.x) * Math.min(1, 0.04 * dt);
+        cam.y += (ny * 3 - cam.y) * Math.min(1, 0.04 * dt);
+        cam.z += (0.05 + boost) * clamp((lastBuild - 0.5) / 0.5) * dt;
+        boost *= Math.pow(0.95, dt);
+        for (const w of wins) if (w.z - cam.z < 1.2) Object.assign(w, spawn(cam.z + FAR + rand(0, 8)));
+        // カーソルの下の、いちばん手前の画面
+        hover = null;
+        if (mouse.active) {
+          let best = Infinity;
+          for (const w of wins) {
+            const r = rectOf(w);
+            if (!r || fogOf(r.dz) < 0.15) continue;
+            if (mouse.x > r.x && mouse.x < r.x + r.w && mouse.y > r.y && mouse.y < r.y + r.h && r.dz < best) { best = r.dz; hover = w.id; }
+          }
+        }
+      },
+      draw (ctx, t, alpha, build) {
+        lastBuild = build;
+        ctx.save();
+        ctx.globalAlpha = alpha; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+
+        // 層の枠：一定の奥行きごとに大きな枠が立ち、近づいて通り過ぎる
+        for (let z = Math.ceil((cam.z + 1) / LAYER) * LAYER; z < cam.z + FAR; z += LAYER) {
+          const a0 = proj(-17, -9.5, z), a1 = proj(17, 9.5, z);
+          if (!a0 || !a1) continue;
+          const fog = fogOf(z - cam.z) * clamp(build * 1.3);
+          if (fog < 0.01) continue;
+          const x0 = a0[0], y0 = a0[1], x1 = a1[0], y1 = a1[1];
+          ctx.strokeStyle = `rgba(${IN},${0.2 * fog})`; ctx.lineWidth = 1; ctx.strokeRect(x0, y0, x1 - x0, y1 - y0);
+          const tick = Math.min(22, (x1 - x0) * 0.04);
+          ctx.beginPath();
+          [[x0, y0, 1, 1], [x1, y0, -1, 1], [x0, y1, 1, -1], [x1, y1, -1, -1]].forEach(([x, y, sx, sy]) => {
+            ctx.moveTo(x + sx * tick, y); ctx.lineTo(x, y); ctx.lineTo(x, y + sy * tick);
+          });
+          stroke(ctx, CY, 0.7 * fog, 1.5);
+          ctx.font = '10px "Space Mono", monospace'; ctx.textBaseline = 'top';
+          ctx.fillStyle = `rgba(${CY},${0.55 * fog})`;
+          ctx.fillText(`LAYER ${String(Math.round(z / LAYER) % 100).padStart(2, '0')}`, x0 + 6, y0 + 6);
+        }
+
+        const list = wins.map(w => ({ w, r: rectOf(w) }))
+          .filter(o => o.r && o.r.dz < FAR)
+          .sort((a, b) => b.r.dz - a.r.dz);
+
+        // 層をまたいで画面どうしをつなぐ点線
+        ctx.save();
+        ctx.setLineDash([3, 6]); ctx.lineDashOffset = -t * 0.03;
+        ctx.beginPath();
+        let prev = null;
+        list.forEach(o => {
+          if (o.w.id % 4 !== 0) return;
+          if (prev && Math.abs(prev.r.dz - o.r.dz) > 4) {
+            ctx.moveTo(prev.r.x + prev.r.w / 2, prev.r.y + prev.r.h / 2);
+            ctx.lineTo(o.r.x + o.r.w / 2, o.r.y + o.r.h / 2);
+          }
+          prev = o;
+        });
+        stroke(ctx, IN, 0.22 * clamp((build - 0.5) / 0.5), 1);
+        ctx.restore();
+
+        list.forEach(({ w, r }) => {
+          const appear = easeOut(clamp(build * 1.6 - (r.dz / FAR) * 0.6));   // 手前の画面から先に出る
+          const a = fogOf(r.dz) * appear;
+          if (a < 0.02) return;
+          const hot = hover === w.id;
+          ctx.save();
+          ctx.globalAlpha = alpha * a;
+          roundRect(ctx, r.x, r.y, r.w, r.h, Math.max(3, Math.min(10, r.w * 0.03)));
+          ctx.fillStyle = 'rgba(6,10,28,.84)'; ctx.fill();
+          if (hot) { ctx.shadowColor = `rgba(${CY},.95)`; ctx.shadowBlur = 24; }
+          stroke(ctx, hot ? WH : w.hue, 0.9, hot ? 2 : 1.2);
+          ctx.shadowBlur = 0;
+          if (r.w > 60) content(ctx, w, r, t);
+          if (r.w > 44) {
+            ctx.font = `${Math.round(clamp(r.w * 0.05, 9, 13))}px "Space Mono", monospace`; ctx.textBaseline = 'bottom';
+            ctx.fillStyle = `rgba(${hot ? WH : CY},.85)`; ctx.fillText(w.label, r.x, r.y - 4);
+          }
+          ctx.restore();
+        });
+        ctx.restore();
+      },
+      // 点が集まる先：画面内に見えている、手前の画面の枠
+      targets (n) {
+        const rects = wins.map(w => rectOf(w))
+          .filter(r => r && r.dz > 3 && r.dz < FAR * 0.6 && r.x + r.w > 0 && r.x < W && r.y + r.h > 0 && r.y < H)
+          .sort((a, b) => a.dz - b.dz)
+          .slice(0, 18)
+          .map(r => ({ u: r.x, v: r.y, w: r.w, h: r.h }));
+        return rects.length ? perimeter(rects, n).map(([u, v]) => [u, v]) : [];
+      },
+      click () { boost = 0.5; },
+    };
+  }
+
   global.WebVariants = {
     a: { id: 'a', name: 'UNFOLD LAYOUT', ja: 'レイアウトが広がる', make: unfold },
     b: { id: 'b', name: 'PHONE FEED', ja: 'スマホの画面', make: phoneFeed },
     c: { id: 'c', name: 'MULTI SCREEN', ja: '幅の違う画面', make: multiScreen },
     d: { id: 'd', name: 'CODE → PAGE', ja: 'コードからページ', make: codeToPage },
     e: { id: 'e', name: 'CURSOR BUILD', ja: 'カーソルで組む', make: cursorBuild },
+    f: { id: 'f', name: 'LAYER SPACE', ja: '何層にも重なる画面', make: layerSpace },
   };
 })(window);
