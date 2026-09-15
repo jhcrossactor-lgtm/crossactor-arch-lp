@@ -41,6 +41,8 @@ a{ color:inherit; }
 
 /* ---------- ステージと文字 ---------- */
 .stage{ position:relative; height:100vh; height:100svh; min-height:560px; overflow:hidden; isolation:isolate; }
+/* スマホでタップするたびに画面全体が青く光る（ブラウザのタップハイライト）のを消す */
+.stage, .stage *{ -webkit-tap-highlight-color:transparent; }
 .copy{
   position:absolute; z-index:6;
   left:var(--edge); bottom:15vh;

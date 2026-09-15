@@ -310,13 +310,26 @@
       return k[k.length - 1].slice(1);
     }
 
+    /* 写真の置き方。PC は画面いっぱい（cover）。
+       スマホ（縦長）は画面いっぱいだとアップになりすぎるので、上半分の帯の高さに合わせて置き、
+       帯の下端を背景色へフェードさせる。寄りの量も半分にして、引きの画角にする */
+    const BAND = 0.5, FADE_FROM = 0.36, PHOTO_H = 0.56;   // 帯の高さ／フェード開始／写真が見える下端（画面比）
+    function photoRect (nw, nh, cw, ch, fx, fy, zoom, lx, ly) {
+      if (!narrow) {
+        const s = Math.max(cw / nw, ch / nh) * zoom;
+        const dw = nw * s, dh = nh * s;
+        return [clamp(cw / 2 - fx * dw - lx, cw - dw, 0), clamp(ch / 2 - fy * dh - ly, ch - dh, 0), dw, dh];
+      }
+      const bh = ch * BAND;
+      const s = Math.max(cw / nw, bh / nh) * (1 + (zoom - 1) * 0.5);
+      const dw = nw * s, dh = nh * s;
+      return [clamp(cw / 2 - fx * dw - lx, cw - dw, 0), clamp(bh / 2 - fy * dh - ly, bh - dh, 0), dw, dh];
+    }
+
     function drawCover (ctx, idx, fx, fy, zoom) {
       const src = scaled[idx] || imgs[idx];
       const nw = src.width || src.naturalWidth, nh = src.height || src.naturalHeight;
-      const s = Math.max(W / nw, H / nh) * zoom;
-      const dw = nw * s, dh = nh * s;
-      const dx = clamp(W / 2 - fx * dw - look.x * 18, W - dw, 0);
-      const dy = clamp(H / 2 - fy * dh - look.y * 12, H - dh, 0);
+      const [dx, dy, dw, dh] = photoRect(nw, nh, W, H, fx, fy, zoom, look.x * 18, look.y * 12);
       ctx.drawImage(src, dx, dy, dw, dh);
     }
 
@@ -335,9 +348,14 @@
       // 画面と同じ構図（END 時点のビュー）で描く
       const [fx, fy, z] = shotView(last, END);
       const nw = im.width || im.naturalWidth, nh = im.height || im.naturalHeight;
-      const s = Math.max(w / nw, h / nh) * z;
-      const dw = nw * s, dh = nh * s;
-      sctx.drawImage(im, clamp(w / 2 - fx * dw, w - dw, 0), clamp(h / 2 - fy * dh, h - dh, 0), dw, dh);
+      const [dx, dy, dw, dh] = photoRect(nw, nh, w, h, fx, fy, z, 0, 0);
+      sctx.drawImage(im, dx, dy, dw, dh);
+      // スマホは画面と同じく帯の下をフェードさせ、縁取りの線もそこで消えるようにする
+      if (narrow) {
+        const f = sctx.createLinearGradient(0, h * FADE_FROM, 0, h * PHOTO_H);
+        f.addColorStop(0, 'rgba(0,0,0,0)'); f.addColorStop(1, 'rgba(0,0,0,1)');
+        sctx.fillStyle = f; sctx.fillRect(0, h * FADE_FROM, w, h);
+      }
       const data = sctx.getImageData(0, 0, w, h).data;
       const lum = new Float32Array(w * h);
       for (let i = 0; i < w * h; i++) lum[i] = data[i * 4] * 0.299 + data[i * 4 + 1] * 0.587 + data[i * 4 + 2] * 0.114;
@@ -441,8 +459,9 @@
       const photoK = alpha * (1 - smooth(clamp((out - 0.08) / 0.5)));
       if (photoK <= 0.01) return;
       const edge = W * easeInOut(reveal);
+      const ph = narrow ? H * PHOTO_H : H;   // 写真が見える高さ（スマホは上の帯だけ）
       ctx.save();
-      ctx.beginPath(); ctx.rect(0, 0, edge, H); ctx.clip();
+      ctx.beginPath(); ctx.rect(0, 0, edge, ph); ctx.clip();
       const canFilter = ctx.filter !== undefined;
       if (out > 0.01 && canFilter) ctx.filter = `saturate(${Math.round(clamp(1 - out * 1.15) * 100)}%)`;
       SHOTS.forEach((shot, i) => {
@@ -463,11 +482,13 @@
         ctx.fillStyle = `rgba(6,12,32,${0.8 * clamp(out * 1.5)})`; ctx.fillRect(0, 0, W, H);
         ctx.fillStyle = `rgba(${CY},${0.04 * out})`; ctx.fillRect(0, 0, W, H);
       }
-      // 見出しが読めるよう、文字の側（PCは左、スマホは下）を暗くする
-      const shade = narrow ? ctx.createLinearGradient(0, H * 0.3, 0, H) : ctx.createLinearGradient(0, 0, W * 0.6, 0);
-      shade.addColorStop(0, narrow ? 'rgba(3,4,10,0)' : 'rgba(3,4,10,.78)');
-      shade.addColorStop(narrow ? 0.45 : 0.55, 'rgba(3,4,10,.45)');
-      shade.addColorStop(1, narrow ? 'rgba(3,4,10,.85)' : 'rgba(3,4,10,0)');
+      // 見出しが読めるよう、PC は文字の側（左）を暗くする。スマホは写真の帯の下端を背景色へフェード
+      const shade = narrow ? ctx.createLinearGradient(0, H * FADE_FROM, 0, ph) : ctx.createLinearGradient(0, 0, W * 0.6, 0);
+      if (narrow) {
+        shade.addColorStop(0, 'rgba(3,4,10,0)'); shade.addColorStop(1, 'rgba(3,4,10,1)');
+      } else {
+        shade.addColorStop(0, 'rgba(3,4,10,.78)'); shade.addColorStop(0.55, 'rgba(3,4,10,.45)'); shade.addColorStop(1, 'rgba(3,4,10,0)');
+      }
       ctx.fillStyle = shade; ctx.fillRect(0, 0, W, H);
       // 上の工程ラベルと HUD の下も少し暗くする
       const top = ctx.createLinearGradient(0, 0, 0, H * 0.26);
@@ -486,9 +507,9 @@
         ctx.globalAlpha = alpha;
         const band = ctx.createLinearGradient(edge - 120, 0, edge, 0);
         band.addColorStop(0, `rgba(${AM},0)`); band.addColorStop(1, `rgba(${AM},.3)`);
-        ctx.fillStyle = band; ctx.fillRect(edge - 120, 0, 120, H);
+        ctx.fillStyle = band; ctx.fillRect(edge - 120, 0, 120, ph);
         ctx.fillStyle = '#ffe2b0'; ctx.shadowColor = `rgba(${AM},1)`; ctx.shadowBlur = 18;
-        ctx.fillRect(edge - 1, 0, 2, H);
+        ctx.fillRect(edge - 1, 0, 2, ph);
         ctx.restore();
       }
     }

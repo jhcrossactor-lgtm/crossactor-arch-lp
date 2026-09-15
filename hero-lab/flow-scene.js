@@ -544,12 +544,24 @@
     }
     const start = () => { if (!raf && !reduce) { last = performance.now(); raf = requestAnimationFrame(loop); } };
 
-    host.addEventListener('pointermove', e => {
+    // スマホ：指でなぞると追従する。ブラウザにスクロールやズームとして奪われないよう touch-action を切る
+    // （ページがスクロールする本番に入れるときは opts.touchAction: 'pan-y' を渡す）
+    host.style.touchAction = opts.touchAction || 'none';
+    let releaseTimer = 0;
+    const setPointer = e => {
+      clearTimeout(releaseTimer);
       const r = fg.getBoundingClientRect();
       mouse.x = e.clientX - r.left; mouse.y = e.clientY - r.top; mouse.active = true;
       city.steer(mouse.x / Math.max(W, 1) - 0.5, mouse.y / Math.max(H, 1) - 0.5);
-    });
-    host.addEventListener('pointerleave', () => { mouse.active = false; mouse.x = mouse.y = -1e4; city.release(); });
+    };
+    const release = () => { mouse.active = false; mouse.x = mouse.y = -1e4; city.release(); };
+    host.addEventListener('pointerdown', setPointer);
+    host.addEventListener('pointermove', setPointer);
+    // 指を離したら、少しの間その位置に残してから離す（すぐ消えると追従が見えにくい）
+    const liftTouch = e => { if (e.pointerType !== 'mouse') { clearTimeout(releaseTimer); releaseTimer = setTimeout(release, 900); } };
+    host.addEventListener('pointerup', liftTouch);
+    host.addEventListener('pointercancel', liftTouch);
+    host.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') release(); });
     fg.addEventListener('click', e => {
       const r = fg.getBoundingClientRect();
       const x = e.clientX - r.left, y = e.clientY - r.top;
