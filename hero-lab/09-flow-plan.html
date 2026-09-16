@@ -36,7 +36,7 @@
 
   .chips{ display:flex; flex-wrap:wrap; gap:8px; list-style:none; margin:28px 0 0; padding:0; }
   .chip{
-    appearance:none; cursor:pointer;
+    appearance:none; cursor:pointer; text-decoration:none;
     display:inline-flex; align-items:center; gap:8px;
     padding:8px 14px; border:1px solid rgba(110,231,255,.34);
     background:rgba(3,4,10,.6); color:rgba(238,241,250,.72);
@@ -108,10 +108,11 @@
       <a class="btn btn--solid" href="#">無料で相談する →</a>
       <a class="btn btn--ghost" href="#">サービスを見る</a>
     </div>
-    <ul class="chips rise" style="--d:.52s" aria-label="場面を切り替える">
-      <li><button type="button" class="chip is-active" data-scene="ai" aria-pressed="true"><span>01</span>AI</button></li>
-      <li><button type="button" class="chip" data-scene="city" aria-pressed="false"><span>02</span>CITY</button></li>
-      <li><button type="button" class="chip" data-scene="web" aria-pressed="false"><span>03</span>PLAN</button></li>
+    <!-- スマホでも親指が届く位置。ここから下のコンテンツへ飛ばす（リンク先は各セクションを作ってから） -->
+    <ul class="chips rise" style="--d:.52s" aria-label="コンテンツへ移動">
+      <li><a class="chip" href="#service"><span>01</span>3D VRパース</a></li>
+      <li><a class="chip" href="#works"><span>02</span>制作実績</a></li>
+      <li><a class="chip" href="#contact"><span>03</span>無料相談</a></li>
     </ul>
   </div>
   <p class="cap" id="cap" hidden>※ 平面図と3Dの動きはイメージ ／ パースは制作実例</p>
@@ -120,7 +121,6 @@
 
 <script src="flow-scene.js"></script>
 <script src="plan-render.js"></script>
-<script src="lab.js"></script>
 <script>
 (() => {
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -128,7 +128,6 @@
   const word = document.getElementById('word');
   const hint = document.getElementById('hint');
   const cap = document.getElementById('cap');
-  const chips = [...document.querySelectorAll('.chip[data-scene]')];
   const hud = { nodes: document.getElementById('h-nodes'), links: document.getElementById('h-links'), state: document.getElementById('h-state') };
   const WORDS = { ai: 'AI', city: '街', web: '図面' };
   const HINTS = {
@@ -138,7 +137,6 @@
   };
 
   const onScene = name => {
-    chips.forEach(c => { const on = c.dataset.scene === name; c.classList.toggle('is-active', on); c.setAttribute('aria-pressed', String(on)); });
     hint.textContent = HINTS[name];
     cap.hidden = name !== 'web';
     if (reduce) { word.textContent = WORDS[name]; word.className = `word is-${name}`; return; }
@@ -161,7 +159,6 @@
       hud.state.textContent = s.state;
     },
   });
-  chips.forEach(c => c.addEventListener('click', () => scene.show(c.dataset.scene)));
 
   // ?scene=web などで、その場面から見られるようにする（見比べ用）
   const start = params.get('scene');
