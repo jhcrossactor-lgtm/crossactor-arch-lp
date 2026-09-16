@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CROSSACTOR — 図面を、体験に変える。3D VRパース・Web制作・AI活用</title>
+<meta name="description" content="設計の実務とAIの両方を手を動かして作るスタジオ。3D VRパース制作、動きのあるWebサイト、建築・不動産の現場に効くAI活用の研修と伴走。大阪・関西中心。">
+<link rel="stylesheet" href="top-new.css">
+</head>
+<body>
+
+<header class="nav" id="nav">
+  <a class="nav__logo" href="#top"><img src="assets/logo-light.png" alt="CROSSACTOR" width="618" height="314"></a>
+  <nav class="nav__links" aria-label="ページ内リンク">
+    <a href="#works">Works</a><a href="#ai">AI</a><a href="#service">Service</a><a href="#profile">Profile</a>
+  </nav>
+  <a class="nav__cta" href="#contact">無料で相談</a>
+</header>
+
+<!-- ============ ヒーロー ============ -->
+<section class="stage" id="top">
+  <canvas id="rain" aria-hidden="true"></canvas>
+  <canvas id="hero" aria-hidden="true"></canvas>
+  <div class="hud" aria-hidden="true">
+    <div>NODES <b id="h-nodes">0</b></div>
+    <div>LINKS <b id="h-links">0</b></div>
+    <div class="hud__state" id="h-state">LEARNING</div>
+  </div>
+
+  <div class="copy">
+    <p class="eyebrow">CROSSACTOR ／ 建築 × AI</p>
+    <h1 class="hero__title" aria-label="AIも、街も、図面も、体験に変える。">
+      <span aria-hidden="true"><span class="word is-ai" id="word">AI</span>を、<br>体験に変える。</span>
+    </h1>
+    <p class="hero__lead">3D VRパース、動きのあるWebサイト、現場で使えるAIの仕組み。設計の実務を積んできた人間が、企画から手を動かして作ります。</p>
+    <div class="actions">
+      <a class="btn btn--solid" href="#contact">無料で相談する →</a>
+      <a class="btn btn--ghost" href="#works">作ったものを見る</a>
+    </div>
+    <!-- スマホでも親指が届く位置。主要セクションへの導線 -->
+    <ul class="chips" aria-label="コンテンツへ移動">
+      <li><a class="chip" href="#works"><span>01</span>制作実績</a></li>
+      <li><a class="chip" href="#ai"><span>02</span>AIの実例</a></li>
+      <li><a class="chip" href="#service"><span>03</span>研修・料金</a></li>
+    </ul>
+  </div>
+  <p class="cap" id="cap" hidden>※ 平面図と3Dの動きはイメージ ／ パースは制作実例</p>
+</section>
+
+<!-- ============ 制作実績 ============ -->
+<section class="section" id="works">
+  <div class="section__head reveal">
+    <p class="label">WORKS</p>
+    <h2 class="h2">説明より、<span class="hl">作ったもの</span>を見てください。</h2>
+    <p class="sub">掲載しているパースと図面は、実際にお渡ししたものです。お客さまの了解をいただいた範囲で、社名は伏せて紹介しています。</p>
+  </div>
+
+  <div class="wrap">
+    <!-- 01 図面 → パース -->
+    <article class="work work--wide reveal">
+      <div class="work__inner">
+        <div class="work__media">
+          <span class="work__tag">3D VR PERSPECTIVE</span>
+          <img src="assets/render-living.webp" alt="平面図から制作したリビングのパース" width="2400" height="1351" loading="lazy">
+        </div>
+        <div class="work__body">
+          <h3>平面図だけの状態から、住んだあとの景色をつくる</h3>
+          <p>まだ建っていない住まいを、家具・照明・窓の外まで含めて1枚で伝えます。打ち合わせの場で「これなら分かる」と言ってもらうための絵です。</p>
+          <ul class="meta">
+            <li>住宅（北海道）</li><li>平面図から制作</li><li>リビング・ダイニング</li>
+          </ul>
+        </div>
+      </div>
+    </article>
+
+    <article class="work reveal">
+      <div class="pair">
+        <figure>
+          <div class="work__media"><img src="assets/plan-lines.webp" alt="もとになった平面図" width="2000" height="1125" loading="lazy"></div>
+          <figcaption>01 — もとの平面図</figcaption>
+        </figure>
+        <figure>
+          <div class="work__media"><img src="assets/walk-living2.webp" alt="ダイニング側から見たパース" width="1672" height="941" loading="lazy"></div>
+          <figcaption>02 — 同じ住まいのダイニング側</figcaption>
+        </figure>
+      </div>
+      <div class="work__body">
+        <h3>1枚で終わらせない。振り返った先までつくる</h3>
+        <p>視点を変えたカットを並べると、間取りのつながりが伝わります。VRにすれば、その場で見回して歩けます。</p>
+      </div>
+    </article>
+
+    <!-- 02 今ある部屋から -->
+    <article class="work reveal">
+      <div class="trio">
+        <figure>
+          <div class="work__media"><img src="assets/room-before.webp" alt="現況の部屋" width="1440" height="720" loading="lazy"></div>
+          <figcaption>01 — 今の部屋</figcaption>
+        </figure>
+        <figure>
+          <div class="work__media"><img src="assets/room-cleared.webp" alt="家具を撤去した状態" width="1440" height="720" loading="lazy"></div>
+          <figcaption>02 — 残置物をなくす</figcaption>
+        </figure>
+        <figure>
+          <div class="work__media"><img src="assets/room-styled.webp" alt="家具を入れた提案" width="1440" height="720" loading="lazy"></div>
+          <figcaption>03 — 家具を入れて提案</figcaption>
+        </figure>
+      </div>
+      <div class="work__body">
+        <h3>今ある部屋の写真が、そのまま提案書になる</h3>
+        <p>空室のまま案内するより、暮らしが見えたほうが決まります。写真を送ってもらえれば、片づけて家具を置いた状態をつくります。360度で見回せる形にも対応します。</p>
+        <ul class="meta"><li>既存写真からのVR化</li><li>賃貸・売買の募集資料</li><li>リフォーム提案</li></ul>
+      </div>
+    </article>
+
+    <!-- 03 図面・作図 -->
+    <article class="work work--wide reveal">
+      <div class="work__inner">
+        <div class="work__media">
+          <span class="work__tag">DRAWING</span>
+          <img src="assets/structure.webp" alt="木造の躯体" width="2400" height="1600" loading="lazy">
+        </div>
+        <div class="work__body">
+          <h3>図面まわりは、実務のまま引き受けます</h3>
+          <p>設計事務所さま・不動産会社さまからの作図代行を続けてきました。絵だけの会社ではないので、法規や納まりの話がそのまま通じます。</p>
+          <ul class="meta"><li>天空率検討</li><li>定期調査報告書</li><li>マンション・ハイツ・ビルの作図</li><li>企画段階の検討図</li></ul>
+        </div>
+      </div>
+    </article>
+
+    <!-- 04 Web -->
+    <article class="work reveal">
+      <div class="work__body">
+        <h3>このページ自体が、Web制作の見本です</h3>
+        <p>冒頭の動き（点と線が集まる → 街になる → 平面図が描かれて実際のパースになる）は、すべてこのページの中で動いています。動画ではありません。外部のライブラリも使わず、文字も画像も自前で持っているので、スマホでも軽く動きます。</p>
+        <p>同じ作り方で、会社のサイトやキャンペーンのLPをお作りします。「他社と同じテンプレートに見えるのが嫌だ」という方に向いています。</p>
+        <ul class="meta"><li>LP・コーポレートサイト</li><li>スマホ最適化</li><li>動きの設計から</li></ul>
+      </div>
+    </article>
+  </div>
+</section>
+
+<!-- ============ AIの実例 ============ -->
+<section class="section section--alt" id="ai">
+  <div class="section__head reveal">
+    <p class="label">AI IN PRACTICE</p>
+    <h2 class="h2">AIの話をする前に、<br><span class="hl">自分の仕事で動かしています</span>。</h2>
+    <p class="sub">研修やコンサルでお話しするのは、机上の一般論ではありません。自分の会社の業務を実際にAIで回していて、そこで分かったこと・失敗したことをそのままお伝えします。以下はすべて現在も動いている仕組みです。</p>
+  </div>
+
+  <div class="wrap cards reveal">
+    <div class="card">
+      <p class="card__no">01</p>
+      <h3>AIの社員組織を作って、自社を回している</h3>
+      <p>調査・制作・発信などの役割を持たせたAIを部門ごとに用意し、日々の業務を分担させています。誰に何を任せると成果が出るかを、運用しながら確かめてきました。</p>
+      <span class="state">運用中</span>
+    </div>
+    <div class="card">
+      <p class="card__no">02</p>
+      <h3>業界ニュースの収集から発信までを自動化</h3>
+      <p>建築・不動産とAIに関する海外・国内の情報を集め、要約して投稿用の原稿にするところまで自動で動かしています。人がやるのは、出すかどうかの判断と最終確認だけです。</p>
+      <span class="state">運用中</span>
+    </div>
+    <div class="card">
+      <p class="card__no">03</p>
+      <h3>市場レポートを自動で作る</h3>
+      <p>関西の住宅市場のデータを集め、定期レポートの形に組み立てるところまで自動化しました。営業資料や社内の共有に使えるものが、手間なく出てきます。</p>
+      <span class="state">運用中</span>
+    </div>
+    <div class="card">
+      <p class="card__no">04</p>
+      <h3>収益物件の管理台帳をつくった</h3>
+      <p>賃料・入金・収支・レントロールをブラウザで扱える台帳です。エクセルの手作業で起きていた転記ミスと、月末の集計時間をなくすために作りました。</p>
+      <span class="state">実務で使用中</span>
+    </div>
+    <div class="card">
+      <p class="card__no">05</p>
+      <h3>分譲地の区画割りを自動で出す</h3>
+      <p>敷地の図面から、戸建分譲の区画割り案を自動で生成します。何案も手で描いていた検討を、条件を変えて即座に比べられるようにしました。</p>
+      <span class="state">開発中</span>
+    </div>
+    <div class="card">
+      <p class="card__no">06</p>
+      <h3>募集データを集めて、数字で見る</h3>
+      <p>賃貸の募集情報を継続的に集めて整理し、賃料の相場を数字で確かめられるようにしています。査定や企画の裏づけに使います。</p>
+      <span class="state">開発中</span>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 研修・コンサル・料金 ============ -->
+<section class="section" id="service">
+  <div class="section__head reveal">
+    <p class="label">SERVICE &amp; PRICE</p>
+    <h2 class="h2">「うちの仕事で、<span class="hl">どう使うか</span>」から始めます。</h2>
+    <p class="sub">建築・不動産の会社さまと、地域の中小企業さま向けです。ツールの使い方の説明で終わらせず、その場で自社の業務をひとつ自動化して持ち帰ってもらうことを目指します。</p>
+  </div>
+
+  <div class="wrap menu reveal">
+    <div class="menu__row">
+      <div>
+        <h3>まず話してみる（60分）</h3>
+        <p>今の困りごとを聞いて、AIで変えられるところ・変えないほうがいいところを仕分けします。オンラインで。</p>
+      </div>
+      <p class="price"><span class="tbd">要記入</span><small>ONLINE ／ 60MIN</small></p>
+    </div>
+    <div class="menu__row">
+      <div>
+        <h3>AI活用研修（半日 / 1日）</h3>
+        <p>実際の業務を題材にした研修です。参加者のパソコンで手を動かしてもらい、その日のうちに使える状態にします。対面（関西中心）・オンラインどちらも。</p>
+      </div>
+      <p class="price"><span class="tbd">要記入</span><small>半日3時間 ／ 1日6時間</small></p>
+    </div>
+    <div class="menu__row">
+      <div>
+        <h3>業務自動化の伴走</h3>
+        <p>月ごとに課題をひとつずつ潰していきます。仕組みを作るところまで一緒にやるので、社内に残ります。</p>
+      </div>
+      <p class="price"><span class="tbd">要記入</span><small>月額 ／ 土日・夜間が中心</small></p>
+    </div>
+    <div class="menu__row">
+      <div>
+        <h3>仕組みの代行制作</h3>
+        <p>研修や伴走ではなく、必要な仕組みをこちらで作ってお渡しします。上のAIの実例はすべて自作なので、同じものを御社向けに作れます。</p>
+      </div>
+      <p class="price"><span class="tbd">要記入</span><small>内容により見積</small></p>
+    </div>
+    <div class="menu__row">
+      <div>
+        <h3>3D VRパース制作</h3>
+        <p>平面図から、または今ある部屋の写真から。1カットからお受けします。VR（見回せる形）にも対応します。</p>
+      </div>
+      <p class="price"><span class="tbd">要記入</span><small>1カット〜</small></p>
+    </div>
+    <div class="menu__row">
+      <div>
+        <h3>Webサイト・LP制作</h3>
+        <p>このページと同じ作り方で、動きから設計します。スマホでの見え方を最優先にします。</p>
+      </div>
+      <p class="price"><span class="tbd">要記入</span><small>1ページ〜</small></p>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <p class="note reveal"><strong>日程について。</strong>平日の日中は設計・制作の実務が入っているため、伴走と代行の作業は土日・夜間が中心になります。打ち合わせは平日の夜も対応できます。研修の開催日はご相談ください。</p>
+  </div>
+</section>
+
+<!-- ============ プロフィール ============ -->
+<section class="section section--alt" id="profile">
+  <div class="section__head reveal">
+    <p class="label">PROFILE</p>
+    <h2 class="h2">図面を描いてきた人間が、<br><span class="hl">AIも自分で組んでいます</span>。</h2>
+  </div>
+  <div class="wrap profile">
+    <div class="reveal">
+      <p class="sub" style="margin-bottom:18px">建築の設計と作図を本業としてきました。現場で何が手間になっているかを知っているので、AIの話も「業務のどこが楽になるか」から入れます。逆に、AIに任せないほうがいい仕事もはっきり言います。</p>
+      <p class="sub">パースもサイトもAIの仕組みも、外注せずに自分で作っています。だから、打ち合わせでその場で直せます。</p>
+    </div>
+    <dl class="facts reveal">
+      <div><dt>拠点</dt><dd>大阪・関西を中心に活動</dd></div>
+      <div><dt>本業</dt><dd>建築設計・作図（実務<span class="tbd">◯年：要記入</span>）</dd></div>
+      <div><dt>資格</dt><dd>生成AIパスポート</dd></div>
+      <div><dt>対応</dt><dd>3D VRパース ／ Webサイト・LP ／ AI研修・伴走・代行</dd></div>
+    </dl>
+  </div>
+</section>
+
+<!-- ============ 相談 ============ -->
+<section class="cta" id="contact">
+  <div class="wrap">
+    <p class="label reveal" style="justify-content:center">CONTACT</p>
+    <h2 class="h2 reveal">まずは、話してみませんか。</h2>
+    <p class="sub reveal" style="margin:0 auto 28px">「何ができるか分からない」の段階で大丈夫です。今の業務を聞いて、使えそうなところだけお伝えします。売り込みはしません。</p>
+    <div class="actions reveal" style="justify-content:center">
+      <a class="btn btn--solid" href="#contact" id="form-link">相談フォームへ →</a>
+      <a class="btn btn--ghost" href="#works">先に作品を見る</a>
+    </div>
+    <p class="cta__note">※ このページは制作中の下書きです。料金とフォームの準備ができ次第、公開版に差し替えます。</p>
+  </div>
+</section>
+
+<footer class="footer">
+  <div class="footer__row">
+    <span>© CROSSACTOR</span>
+    <span>掲載しているパース・図面は制作実例です（社名は伏せています）。躯体の写真：Marek Ślusarczyk（<a href="https://creativecommons.org/licenses/by/3.0" rel="noopener">CC BY 3.0</a>）</span>
+  </div>
+</footer>
+
+<script src="hero-lab/flow-scene.js"></script>
+<script src="hero-lab/plan-render.js"></script>
+<script>
+(() => {
+  /* ---------- ヒーローの動き（hero-lab の 09 と同じ） ---------- */
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const word = document.getElementById('word');
+  const cap = document.getElementById('cap');
+  const hud = { nodes: document.getElementById('h-nodes'), links: document.getElementById('h-links'), state: document.getElementById('h-state') };
+  const WORDS = { ai: 'AI', city: '街', web: '図面' };
+
+  FlowScene.mount({
+    canvas: document.getElementById('hero'),
+    rainCanvas: document.getElementById('rain'),
+    pointerTarget: document.querySelector('.stage'),
+    web: PlanRender.make({ image: 'assets/render-living.webp', walk: ['assets/walk-living2.webp'] }),
+    durations: { toWeb: 2600, web: 21200, toAI: 3400 },
+    webRain: 0,                 // 図面の場面はコードレインではなく方眼紙
+    touchAction: 'pan-y',       // 縦スワイプはページのスクロールに渡す
+    stateNames: { toWeb: 'DRAFTING', web: 'PLAN → RENDER' },
+    onScene: name => {
+      cap.hidden = name !== 'web';
+      if (reduce) { word.textContent = WORDS[name]; word.className = `word is-${name}`; return; }
+      word.classList.add('is-out');
+      setTimeout(() => { word.textContent = WORDS[name]; word.className = `word is-in is-${name}`; }, 260);
+    },
+    onStats: s => {
+      hud.nodes.textContent = s.nodes.toLocaleString();
+      hud.links.textContent = s.links.toLocaleString();
+      hud.state.textContent = s.state;
+    },
+  });
+
+  /* ---------- スクロールで出てくる ---------- */
+  const io = new IntersectionObserver((es) => {
+    es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('is-in'); io.unobserve(e.target); } });
+  }, { rootMargin: '0px 0px -12% 0px' });
+  document.querySelectorAll('.reveal').forEach((el, i) => { el.style.setProperty('--d', `${(i % 3) * 90}ms`); io.observe(el); });
+
+  /* ---------- ヘッダーの背景（ヒーローを抜けたら敷く） ---------- */
+  const nav = document.getElementById('nav');
+  new IntersectionObserver(([e]) => nav.classList.toggle('is-stuck', !e.isIntersecting), { threshold: 0.1 })
+    .observe(document.getElementById('top'));
+})();
+</script>
+</body>
+</html>
