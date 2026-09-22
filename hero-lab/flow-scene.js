@@ -96,6 +96,17 @@
       return [W / 2 + ((x - cam.x) * f) / dz, horizon() - ((y - cam.y) * f) / dz];
     };
     const riseOf = (b, riseK) => (1 - Math.pow(1 - clamp((FAR - (b.z - cam.z)) / 16), 3)) * riseK;
+    // 同じフレームの中では、同じビルの角は使い回す
+    // （街へ移る間は点の数だけ refPos が呼ばれるため、これが無いと毎フレーム数千回の投影になる）
+    const cornerCache = new Map();
+    let cornerStamp = null;
+    const cornersCached = (b, riseK, stamp) => {
+      if (stamp !== cornerStamp) { cornerStamp = stamp; cornerCache.clear(); }
+      if (cornerCache.has(b.id)) return cornerCache.get(b.id);
+      const P = cornersOf(b, riseK);
+      cornerCache.set(b.id, P);
+      return P;
+    };
     const cornersOf = (b, riseK) => {
       const h = b.h * riseOf(b, riseK);
       const x0 = b.x - b.w / 2, x1 = b.x + b.w / 2, zf = b.z - b.d / 2, zb = b.z + b.d / 2;
@@ -125,6 +136,9 @@
       draw (ctx, t, alpha, riseK) {
         ctx.save();
         ctx.globalAlpha = alpha;
+        // 移り変わりの途中で薄く重なっている間は、数の多い細部（星・窓・アンテナ）を描かない。
+        // 見た目はほとんど変わらないが、1フレームあたり千数百回の描画が減る
+        const detail = alpha > 0.6;
         const hz = horizon();
         const sky = ctx.createLinearGradient(0, 0, 0, hz);
         sky.addColorStop(0, '#04010c'); sky.addColorStop(0.7, '#12052a'); sky.addColorStop(1, '#3b0c4f');
@@ -134,7 +148,7 @@
         glow.addColorStop(0, 'rgba(255,79,216,.45)'); glow.addColorStop(0.35, 'rgba(139,92,246,.16)'); glow.addColorStop(1, 'rgba(0,0,0,0)');
         ctx.fillStyle = glow; ctx.fillRect(0, hz - W * 0.3, W, W * 0.6);
 
-        for (const s of stars) {
+        for (const s of detail ? stars : []) {
           if (s.y > hz - 6) continue;
           ctx.fillStyle = `rgba(255,255,255,${(s.a * (0.6 + 0.4 * Math.sin(t * 0.002 + s.p))).toFixed(3)})`;
           ctx.fillRect(s.x, s.y, 1.2, 1.2);
@@ -184,6 +198,7 @@
           poly([0, 1, 2, 3]); ctx.stroke(); poly(side); ctx.stroke();
           ctx.beginPath(); ctx.moveTo(P[3][0], P[3][1]); ctx.lineTo(P[7][0], P[7][1]); ctx.lineTo(P[6][0], P[6][1]); ctx.lineTo(P[2][0], P[2][1]); ctx.stroke();
 
+          if (!detail) continue;
           const h = b.h * rise, x0 = b.x - b.w / 2, zf = b.z - b.d / 2;
           ctx.fillStyle = `rgba(255,236,190,${(0.75 * fog * rise).toFixed(3)})`;
           for (let r = 0; r < 6; r++) for (let c = 0; c < 4; c++) {
@@ -217,9 +232,10 @@
         return refs.slice(0, n);
       },
       // 対応するビルが入れ替わっていたら null（最後の位置のまま待つ）
-      refPos (r, riseK) {
+      // stamp（そのフレームの時刻）を渡すと、同じビルの角の計算を使い回す
+      refPos (r, riseK, stamp) {
         if (r.b.id !== r.id) return null;
-        const P = cornersOf(r.b, riseK);
+        const P = stamp === undefined ? cornersOf(r.b, riseK) : cornersCached(r.b, riseK, stamp);
         if (!P) return null;
         return [lerp(P[r.a][0], P[r.c][0], r.u), lerp(P[r.a][1], P[r.c][1], r.u)];
       },
@@ -406,7 +422,7 @@
           tx = r[0]; ty = r[1]; p.depth = r[2];
           k = 0.004 + 0.03 * settle; damp = 0.86;
         } else if (phase === 'toCity' && refs[i]) {
-          const pos = city.refPos(refs[i], cityRise);
+          const pos = city.refPos(refs[i], cityRise, now);
           if (pos) refs[i].last = pos;
           if (refs[i].last) { tx = refs[i].last[0]; ty = refs[i].last[1]; k = 0.02 + 0.14 * smooth(u); damp = 0.8; }
         } else if (webTargets && webTargets[i]) {
@@ -454,12 +470,15 @@
     }
 
     // 近い点どうしを線でつなぐ（格子で近所だけ調べる）
+    // 格子の番地は数値にする（文字列キーだと毎フレーム数千個のごみが出る）
+    const cellKey = (gx, gy) => (gx + 1024) * 4096 + (gy + 1024);
+    const grid = new Map();
     function proximity (L, alphas, k) {
-      const grid = new Map();
+      grid.clear();
       parts.forEach((p, i) => {
-        const key = `${Math.floor(p.x / L)},${Math.floor(p.y / L)}`;
-        if (!grid.has(key)) grid.set(key, []);
-        grid.get(key).push(i);
+        const key = cellKey(Math.floor(p.x / L), Math.floor(p.y / L));
+        const cell = grid.get(key);
+        if (cell) cell.push(i); else grid.set(key, [i]);
       });
       const paths = alphas.map(() => new Path2D());
       const L2 = L * L;
@@ -467,7 +486,7 @@
       parts.forEach((p, i) => {
         const gx0 = Math.floor(p.x / L), gy0 = Math.floor(p.y / L);
         for (let gx = gx0 - 1; gx <= gx0 + 1; gx++) for (let gy = gy0 - 1; gy <= gy0 + 1; gy++) {
-          const cell = grid.get(`${gx},${gy}`);
+          const cell = grid.get(cellKey(gx, gy));
           if (!cell) continue;
           for (const j of cell) {
             if (j <= i) continue;

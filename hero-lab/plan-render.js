@@ -145,15 +145,28 @@
       return { pos, target, up, focal, cx };
     }
 
-    function project (p) {
+    /* カメラの向きは1フレームに1回だけ求める。
+       project は線や点の数だけ呼ばれるので、ここで毎回やり直すと重くなる */
+    let basis = null;
+    function setBasis () {
       const fwd = norm(sub(cam.target, cam.pos));
       const right = norm(cross(fwd, cam.up));
       const up = cross(right, fwd);
-      const d = sub(p, cam.pos);
-      const z = dot(d, fwd);
+      basis = {
+        fwd, right, up, pos: cam.pos,
+        f0: Math.min(W, H) * cam.focal * (narrow ? 0.85 : 1),
+        cx: W * (narrow ? 0.5 : cam.cx),
+        cy: H * (narrow ? 0.34 : 0.5),
+      };
+    }
+    function project (p) {
+      const b = basis || (setBasis(), basis);
+      const dx = p[0] - b.pos[0], dy = p[1] - b.pos[1], dz = p[2] - b.pos[2];
+      const z = dx * b.fwd[0] + dy * b.fwd[1] + dz * b.fwd[2];
       if (z < 0.05) return null;
-      const f = (Math.min(W, H) * cam.focal * (narrow ? 0.85 : 1)) / z;
-      return [W * (narrow ? 0.5 : cam.cx) + dot(d, right) * f, H * (narrow ? 0.34 : 0.5) - dot(d, up) * f];
+      const f = b.f0 / z;
+      return [b.cx + (dx * b.right[0] + dy * b.right[1] + dz * b.right[2]) * f,
+              b.cy - (dx * b.up[0] + dy * b.up[1] + dz * b.up[2]) * f];
     }
     const line3 = (ctx, a, b) => {
       const p = project(a), q = project(b);
@@ -553,6 +566,7 @@
         const ms = startAt === null ? 0 : Math.min(t - startAt, END);
         const s = startAt === null ? { draw: 0, tilt: 0, rise: 0, fly: 0, reveal: 0, walk: 0 } : stagesAt(ms);
         cam = cameraFor(s);
+        setBasis();
         const wires = 1 - s.reveal * 0.85;
         // 組み上がったまま外側のフェードが始まった＝AI へ戻り始めた
         const out = build >= 1 && alpha < 0.999 ? clamp(1 - alpha) : 0;
@@ -618,9 +632,18 @@
             }
             pts.push(pt);
           }
-          cache = { n, pts };
+          cache = { n, pts, out: Array.from({ length: n }, () => [0, 0]), tmp: [0, 0, 0] };
         }
-        return cache.pts.map(([x, z]) => project([x, 0, z])).map(p => p || [W / 2, H / 2]);
+        // 毎フレーム呼ばれるので、配列は作り直さず使い回す
+        setBasis();
+        const { pts, out, tmp } = cache;
+        for (let i = 0; i < pts.length; i++) {
+          tmp[0] = pts[i][0]; tmp[2] = pts[i][1];
+          const q = project(tmp);
+          out[i][0] = q ? q[0] : W / 2;
+          out[i][1] = q ? q[1] : H / 2;
+        }
+        return out;
       },
       click () {},
     };
