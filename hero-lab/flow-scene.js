@@ -272,7 +272,7 @@
 
     let web = opts.web || null;
     let W = 0, H = 0, narrow = false, N = 0;
-    let parts = [], dirs = [], refs = [];
+    let parts = [], dirs = [], refs = [], order = [];
     let phase = 'drift', phaseStart = performance.now(), want = null, source = 'ai';
     let rainK = 1, cityAlpha = 0, cityRise = 0, swarmAlpha = 1, webAlpha = 0, webBuild = 0;
     let lv0 = { rainK, cityAlpha, cityRise, webAlpha, webBuild };
@@ -302,6 +302,9 @@
         while (parts.length < N) parts.push({ x: rand(0, W), y: rand(0, H), vx: rand(-0.4, 0.4), vy: rand(-0.4, 0.4), s: rand(0.8, 1.9), free: parts.length % 8 === 0, depth: 1 });
         parts.length = N;
         dirs = fib(N);
+        // 線を結ぶ順番。上限で打ち切ったときに場所の偏りが出ないよう、混ぜておく
+        order = Array.from({ length: N }, (_, i) => i);
+        for (let i = N - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; const x = order[i]; order[i] = order[j]; order[j] = x; }
       }
       if (!center.x) { const b = base(); center.x = b.x; center.y = b.y; }
     }
@@ -483,7 +486,7 @@
     // 格子の番地は数値にする（文字列キーだと毎フレーム数千個のごみが出る）
     const cellKey = (gx, gy) => (gx + 1024) * 4096 + (gy + 1024);
     const grid = new Map();
-    function proximity (L, alphas, k) {
+    function proximity (L, alphas, k, cap = Infinity) {
       grid.clear();
       parts.forEach((p, i) => {
         const key = cellKey(Math.floor(p.x / L), Math.floor(p.y / L));
@@ -493,7 +496,12 @@
       const paths = alphas.map(() => new Path2D());
       const L2 = L * L;
       let n = 0;
-      parts.forEach((p, i) => {
+      // 集まる形（球）やパースの線では、点の番号と位置が対応している。
+      // 番号順に打ち切ると一部の場所だけ線が減るので、混ぜた順番（order）で回す
+      outer:
+      for (let t = 0; t < order.length; t++) {
+        const i = order[t];
+        const p = parts[i];
         const gx0 = Math.floor(p.x / L), gy0 = Math.floor(p.y / L);
         for (let gx = gx0 - 1; gx <= gx0 + 1; gx++) for (let gy = gy0 - 1; gy <= gy0 + 1; gy++) {
           const cell = grid.get(cellKey(gx, gy));
@@ -505,10 +513,10 @@
             if (d2 > L2) continue;
             const b = Math.min(alphas.length - 1, Math.floor((Math.sqrt(d2) / L) * alphas.length));
             paths[b].moveTo(p.x, p.y); paths[b].lineTo(q.x, q.y);
-            n++;
+            if (++n >= cap) break outer;
           }
         }
-      });
+      }
       ctx.lineWidth = 1;
       paths.forEach((path, b) => { ctx.strokeStyle = `rgba(120,210,255,${alphas[b] * k})`; ctx.stroke(path); });
       return n;
@@ -526,11 +534,16 @@
       linkCount = 0;
       if (swarmAlpha > 0.01) {
         const u = clamp((now - phaseStart) / PH[phase]);
-        const L = phase === 'cluster' ? (narrow ? 34 : 46)
-          : phase === 'toCity' || phase === 'toWeb' ? lerp(narrow ? 70 : 92, 20, smooth(u))
+        // 線を結ぶ距離。街やパースへ移るときは、点が密集したまま形に吸い込まれていく。
+        // ここで距離を広げると本数が一気に数万本になって重くなる（実測で 15,000〜27,000 本）。
+        // そのため集まっているときと同じ距離から始めて、細くしていく
+        const Lc = narrow ? 34 : 46;
+        const L = phase === 'cluster' ? Lc
+          : phase === 'toCity' || phase === 'toWeb' ? lerp(Lc, 20, smooth(u))
           : (narrow ? 70 : 92);
         const m3 = PERF ? performance.now() : 0;
-        linkCount = proximity(L, [0.5, 0.3, 0.16, 0.07], swarmAlpha);
+        // 念のための上限。これ以上は重なって見分けがつかない
+        linkCount = proximity(L, [0.5, 0.3, 0.16, 0.07], swarmAlpha, narrow ? 3000 : 6000);
         if (PERF) ema('link', performance.now() - m3);
 
         if (mouse.active && phase !== 'toCity' && phase !== 'toWeb') {
