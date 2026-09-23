@@ -251,7 +251,17 @@
   function mount (opts) {
     const fg = opts.canvas;
     const ctx = fg.getContext('2d');
-    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+    /* 診断用のスイッチ（URLに付ける）
+       ?perf=1   … 1フレームの内訳（ms）を画面の左上に出す
+       ?motion=1 … OSの「視差効果を減らす」設定を無視して動かす（計測用） */
+    const query = typeof location !== 'undefined' ? location.search : '';
+    const PERF = opts.perf || /[?&]perf=1/.test(query);
+    const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches && !/[?&]motion=1/.test(query);
+    // 各処理にかかった時間。急な上下を均すため、指数移動平均で持つ
+    // gapMax はフレーム間隔の最大値（カクつきは平均ではなくここに出る）
+    const perf = { frame: 0, update: 0, rain: 0, city: 0, web: 0, link: 0, dots: 0, fps: 0, gapMax: 0, phases: {} };
+    const ema = (key, v) => { perf[key] += (v - perf[key]) * 0.1; };
+    if (PERF) global.__flowPerf = perf;
     const rain = codeRain(opts.rainCanvas);
     const city = cityScene();
     const host = opts.pointerTarget || fg;
@@ -505,9 +515,13 @@
     }
 
     function draw (now) {
+      const m0 = PERF ? performance.now() : 0;
       ctx.clearRect(0, 0, W, H);
       if (cityAlpha > 0.001) city.draw(ctx, now, cityAlpha, cityRise);
+      const m1 = PERF ? performance.now() : 0;
       if (web && webAlpha > 0.001) web.draw(ctx, now, webAlpha, webBuild);
+      const m2 = PERF ? performance.now() : 0;
+      if (PERF) { ema('city', m1 - m0); ema('web', m2 - m1); }
 
       linkCount = 0;
       if (swarmAlpha > 0.01) {
@@ -515,7 +529,9 @@
         const L = phase === 'cluster' ? (narrow ? 34 : 46)
           : phase === 'toCity' || phase === 'toWeb' ? lerp(narrow ? 70 : 92, 20, smooth(u))
           : (narrow ? 70 : 92);
+        const m3 = PERF ? performance.now() : 0;
         linkCount = proximity(L, [0.5, 0.3, 0.16, 0.07], swarmAlpha);
+        if (PERF) ema('link', performance.now() - m3);
 
         if (mouse.active && phase !== 'toCity' && phase !== 'toWeb') {
           const path = new Path2D();
@@ -524,6 +540,7 @@
           ctx.stroke(path);
         }
 
+        const m4 = PERF ? performance.now() : 0;
         for (let c = 0; c < 3; c++) {
           ctx.fillStyle = DOTS[c];
           for (const p of parts) {
@@ -535,11 +552,32 @@
           }
         }
         ctx.globalAlpha = 1;
+        if (PERF) ema('dots', performance.now() - m4);
       }
       for (const q of pulses) {
         ctx.strokeStyle = `rgba(180,150,255,${Math.max(0, q.a)})`; ctx.lineWidth = 1.5;
         ctx.beginPath(); ctx.arc(q.x, q.y, q.r, 0, Math.PI * 2); ctx.stroke();
       }
+    }
+
+    // ?perf=1 のとき、左上に1フレームの内訳を出す（スマホでも数字を読めるように）
+    function perfOverlay () {
+      const f = v => v.toFixed(1);
+      const cur = perf.phases[phase];
+      const lines = [
+        `FPS ${perf.fps.toFixed(0)}   work ${f(perf.frame)}ms   gap max ${perf.gapMax.toFixed(0)}ms`,
+        `update ${f(perf.update)}  rain ${f(perf.rain)}  city ${f(perf.city)}`,
+        `plan ${f(perf.web)}  links ${f(perf.link)}  dots ${f(perf.dots)}`,
+        `${phase}  drops ${cur ? cur.drops : 0}/${cur ? cur.frames : 0}  links ${linkCount}  px ${fg.width}x${fg.height}`,
+      ];
+      ctx.save();
+      ctx.font = '11px ui-monospace, Menlo, Consolas, monospace';
+      ctx.textBaseline = 'top';
+      ctx.fillStyle = 'rgba(0,0,0,.72)';
+      ctx.fillRect(8, 8, 350, lines.length * 15 + 8);
+      ctx.fillStyle = '#9ff';
+      lines.forEach((l, i) => ctx.fillText(l, 14, 12 + i * 15));
+      ctx.restore();
     }
 
     function stats (now) {
@@ -554,10 +592,30 @@
     function loop (now) {
       raf = 0;
       if (!visible || document.hidden) return;
-      const dt = Math.min((now - last) / 16.667, 3); last = now;
+      const gap = now - last;
+      const dt = Math.min(gap / 16.667, 3);
+      last = now;
+      const t0 = PERF ? performance.now() : 0;
       update(dt, now);
+      const t1 = PERF ? performance.now() : 0;
       rain.draw(dt, rainK, mouse);
+      const t2 = PERF ? performance.now() : 0;
       draw(now);
+      if (PERF) {
+        const work = performance.now() - t0;
+        ema('update', t1 - t0); ema('rain', t2 - t1); ema('frame', work);
+        if (gap > 0 && gap < 1000) {
+          ema('fps', 1000 / gap);
+          perf.gapMax = Math.max(gap, perf.gapMax * 0.97);
+          // 場面ごとの記録：34ms を超えた間隔（＝2フレーム以上の落ち）を数える
+          const s = perf.phases[phase] || (perf.phases[phase] = { frames: 0, drops: 0, maxGap: 0, work: 0, maxWork: 0 });
+          s.frames++; s.work += work;
+          if (gap > 34) s.drops++;
+          if (gap > s.maxGap) s.maxGap = gap;
+          if (work > s.maxWork) s.maxWork = work;
+        }
+        perfOverlay();
+      }
       stats(now);
       raf = requestAnimationFrame(loop);
     }
