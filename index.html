@@ -7,6 +7,8 @@
 <meta name="description" content="3D VRパース制作、動きのあるWebサイト・LP制作、AI導入・活用の相談。設計の現場で培った「伝わる」を、見て触れるかたちにするスタジオです。">
 <link rel="stylesheet" href="styles.css">
 <link rel="stylesheet" href="sections.css">
+<link rel="stylesheet" href="kiiro.css">
+<link rel="stylesheet" href="town.css">
 </head>
 <body>
 
@@ -26,33 +28,51 @@
 
 <!-- ============ HERO ============
      線だけの3Dモデルが 家 → Webサイト → AI と組み替わり、見出しの語も連動して入れ替わる -->
-<section class="hero" id="top">
-  <canvas class="hero__canvas" id="hero-canvas" aria-hidden="true"></canvas>
-  <div class="hero__glow" aria-hidden="true"></div>
+<section class="hero town" id="top" data-v="1">
+  <canvas class="town__canvas" id="town-canvas" aria-hidden="true" data-zoom="0.6" data-cx="0.7" data-cy="0.6"></canvas>
+  <p class="town__screen" aria-hidden="true">SAMPLE ／ 分譲地 12区画　PREVIEW</p>
 
   <div class="hero__inner">
-    <p class="label rise" style="--d:.05s"><span class="label__dot"></span>AI INNOVATION STUDIO</p>
-    <h1 class="hero__title rise" style="--d:.15s" aria-label="建築も、Webも、AIも、体験に変える。">
-      <span aria-hidden="true"><span class="hero__word"><span class="hero__word-in is-cyan" id="hero-word">建築</span></span>を、<br>体験に変える。</span>
-    </h1>
-    <p class="hero__lead rise" style="--d:.28s">
-      3D VRパース、動きのあるWebサイト、AIの活用相談。<br>
-      設計の現場で培った「伝わる」を、見て・触れるかたちにします。
-    </p>
+    <p class="label rise" style="--d:.05s"><span class="label__dot"></span>AI × 建築 ／ 建築PV・パース・図面制作</p>
+    <h1 class="hero__title rise tv tv1" style="--d:.15s">物件資料だけで、<br><span class="mk">街ができる。</span></h1>
+    <h1 class="hero__title rise tv tv2" style="--d:.15s">物件資料から、<br><span class="mk">街並みPV</span>まで。</h1>
+    <h1 class="hero__title rise tv tv3" style="--d:.15s">街は、<br>物件資料から建つ。</h1>
+    <p class="hero__lead rise" style="--d:.28s">区画図や販売図面など、お手元の物件資料だけで、街並みPV・ウォークスルー・清書図面まで。読み取りと区割りはAIが下ごしらえして、仕上げは設計の目で整えます。</p>
     <div class="hero__actions rise" style="--d:.4s">
       <a class="btn btn--primary btn--lg" href="#diagnosis">30秒の相談診断をする</a>
-      <a class="btn btn--line btn--lg" href="#services">サービスを見る</a>
+      <a class="btn btn--line btn--lg" href="#showcase">作例を見る</a>
     </div>
-    <ul class="hero__chips rise" style="--d:.52s" aria-label="表示する線画を切り替える">
-      <li><button type="button" class="chip is-active" data-shape="0" aria-pressed="true"><span>01</span>3D VR</button></li>
-      <li><button type="button" class="chip" data-shape="1" aria-pressed="false"><span>02</span>WEB</button></li>
-      <li><button type="button" class="chip" data-shape="2" aria-pressed="false"><span>03</span>AI</button></li>
-    </ul>
   </div>
 
-  <p class="hero__hint" aria-hidden="true">MOVE CURSOR ／ CLICK TO REBUILD</p>
-  <a class="hero__made" href="#showcase">このサイトも CROSSACTOR が制作しています →</a>
+  <div class="town__ai" aria-hidden="true">
+    <p class="town__ai-bar"><i></i><i></i><i></i><span>Crossactor AI</span></p>
+    <div class="town__ai-log" id="town-log"></div>
+  </div>
+
+  <div class="town__hud">
+    <p class="town__rec" aria-hidden="true"><i></i>REC <span id="town-tc">00:00</span> / 00:18</p>
+    <ol class="town__steps" aria-label="街ができる順番。押すとその場面へ移ります">
+      <li><button type="button" data-step="0"><span>01</span>物件資料</button></li>
+      <li><button type="button" data-step="1"><span>02</span>区割り</button></li>
+      <li><button type="button" data-step="2"><span>03</span>建物</button></li>
+      <li><button type="button" data-step="3"><span>04</span>街並み</button></li>
+    </ol>
+    <div class="town__bar" aria-hidden="true"><i id="town-bar"></i></div>
+  </div>
+
+  <div class="hero__me" aria-hidden="true">
+    <p class="bub bub1">物件資料しかない？</p>
+    <p class="bub bub2">AIと一緒に、街並みPVにします。</p>
+    <div class="arch"></div>
+    <img src="assets/egao.png" alt="">
+  </div>
 </section>
+
+<nav class="vswitch" aria-label="トップの案を切り替える（試作だけの表示）">
+  <button type="button" data-v="1" aria-pressed="true">案1 ステージ</button>
+  <button type="button" data-v="2" aria-pressed="false">案2 モニター</button>
+  <button type="button" data-v="3" aria-pressed="false">案3 大見出し</button>
+</nav>
 
 <div class="marquee" aria-hidden="true">
   <div class="marquee__track">
@@ -353,6 +373,8 @@
 </footer>
 
 <script src="hero3d.js"></script>
+<script src="town.js"></script>
+<script src="town-ui.js"></script>
 <script src="app.js"></script>
 <script src="top.js"></script>
 <script src="consult.js"></script>

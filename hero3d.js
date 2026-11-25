@@ -159,7 +159,7 @@
       return [...p, p[0] + rand(-0.12, 0.12), p[1] + rand(-0.12, 0.12), p[2] + rand(-0.12, 0.12), DIM];
     });
 
-    const COLORS = ['0,200,255', '122,186,42', '180,74,240', '150,170,205'];
+    const COLORS = ['20,20,20', '20,20,20', '120,40,170', '70,70,70'];
     const HOLD = opts.hold || 3600, MORPH = opts.morph || 1500, INTRO = opts.intro || 2000;
 
     let w = 0, h = 0;

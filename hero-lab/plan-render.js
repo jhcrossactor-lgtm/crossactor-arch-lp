@@ -498,14 +498,14 @@
       // 見出しが読めるよう、PC は文字の側（左）を暗くする。スマホは写真の帯の下端を背景色へフェード
       const shade = narrow ? ctx.createLinearGradient(0, H * FADE_FROM, 0, ph) : ctx.createLinearGradient(0, 0, W * 0.6, 0);
       if (narrow) {
-        shade.addColorStop(0, 'rgba(3,4,10,0)'); shade.addColorStop(1, 'rgba(3,4,10,1)');
+        shade.addColorStop(0, 'rgba(7,4,31,0)'); shade.addColorStop(1, 'rgba(7,4,31,1)');
       } else {
-        shade.addColorStop(0, 'rgba(3,4,10,.78)'); shade.addColorStop(0.55, 'rgba(3,4,10,.45)'); shade.addColorStop(1, 'rgba(3,4,10,0)');
+        shade.addColorStop(0, 'rgba(7,4,31,.78)'); shade.addColorStop(0.55, 'rgba(7,4,31,.45)'); shade.addColorStop(1, 'rgba(7,4,31,0)');
       }
       ctx.fillStyle = shade; ctx.fillRect(0, 0, W, H);
       // 上の工程ラベルと HUD の下も少し暗くする
       const top = ctx.createLinearGradient(0, 0, 0, H * 0.26);
-      top.addColorStop(0, 'rgba(3,4,10,.7)'); top.addColorStop(1, 'rgba(3,4,10,0)');
+      top.addColorStop(0, 'rgba(7,4,31,.7)'); top.addColorStop(1, 'rgba(7,4,31,0)');
       ctx.fillStyle = top; ctx.fillRect(0, 0, W, H * 0.26);
       if (reveal >= 1 && out < 0.01) {
         const sx = ((t * 0.00012) % 1.6 - 0.3) * W;

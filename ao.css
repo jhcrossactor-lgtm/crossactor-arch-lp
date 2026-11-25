@@ -1,0 +1,17 @@
+/* 青：さらに暗いタンザナイト。ほぼ黒に近い濃紺に、青紫と紫の光を少しだけ（試し用の上書き） */
+html{ background:#04020f; }
+body{
+  background:
+    radial-gradient(1100px 760px at 84% 6%, rgba(84,62,220,.30), transparent 62%) fixed,
+    radial-gradient(900px 720px at 0% 94%, rgba(120,40,170,.20), transparent 60%) fixed,
+    linear-gradient(160deg, #110a48 0%, #0a0530 45%, #04020f 100%) fixed !important;
+}
+.stage::before{
+  background:
+    radial-gradient(1000px 700px at 74% 38%, rgba(84,62,220,.28), transparent 64%),
+    radial-gradient(820px 640px at 2% 104%, rgba(120,40,170,.24), transparent 60%),
+    linear-gradient(180deg, rgba(36,22,120,.22) 0%, rgba(7,4,31,0) 55%);
+}
+.section--alt{ background:rgba(120,96,255,.05); }
+.card, .menu__row{ background:rgba(7,4,31,.72); }
+.cta{ background:linear-gradient(180deg, rgba(7,4,31,0) 0%, rgba(60,34,160,.36) 100%); }

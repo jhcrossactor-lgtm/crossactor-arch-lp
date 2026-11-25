@@ -39,10 +39,10 @@
         size = W < 760 ? 13 : 15;
         const gap = size * 1.3;
         cols = Array.from({ length: Math.ceil(W / gap) }, (_, i) => ({ x: i * gap, y: rand(-H, H), sp: rand(0.35, 1.1), depth: Math.random() }));
-        ctx.fillStyle = '#03040a'; ctx.fillRect(0, 0, W, H);
+        ctx.fillStyle = '#07041f'; ctx.fillRect(0, 0, W, H);
       },
       draw (dt, k, mouse) {
-        ctx.fillStyle = `rgba(3,4,10,${clamp(0.085 * dt, 0.04, 0.3)})`;
+        ctx.fillStyle = `rgba(7,4,31,${clamp(0.085 * dt, 0.04, 0.3)})`;
         ctx.fillRect(0, 0, W, H);
         if (k < 0.01) return;
         ctx.font = `${size}px "Space Mono", monospace`;
